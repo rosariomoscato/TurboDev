@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Box, render, useApp } from 'ink';
-import { loadConfig } from '../config/store.js';
+import { Box, render, useApp, useInput, Text } from 'ink';
+import { loadConfig, saveConfig } from '../config/store.js';
 import { runAgent } from '../agent/loop.js';
 import { ChatMessage } from '../llm/client.js';
+import { fetchAvailableModels } from '../llm/models.js';
 import SetupWizard from './SetupWizard.js';
 import ChatView from './ChatView.js';
 import InputBar from './InputBar.js';
 import StatusBar from './StatusBar.js';
+import { version } from '../../package.json';
 
 interface MessageDisplay {
   role: 'user' | 'assistant' | 'tool_call' | 'tool_result';
@@ -17,27 +19,146 @@ export default function App() {
   const { exit } = useApp();
   const [config, setConfig] = useState(loadConfig());
   const [setupNeeded, setSetupNeeded] = useState(!config.apiKey || !config.model);
-  const [messages, setMessages] = useState<MessageDisplay[]>([]);
+  const [messages, setMessages] = useState<MessageDisplay[]>([
+    {
+      role: 'assistant',
+      content: [
+        '████████╗██╗   ██╗██████╗ ██████╗  ██████╗ ██████╗ ███████╗██╗   ██╗',
+        '╚══██╔══╝██║   ██║██╔══██╗██╔══██╗██╔═══██╗██╔══██╗██╔════╝██║   ██║',
+        '   ██║   ██║   ██║██████╔╝██████╔╝██║   ██║██║  ██║█████╗  ██║   ██║',
+        '   ██║   ██║   ██║██╔══██╗██╔══██╗██║   ██║██║  ██║██╔══╝  ╚██╗ ██╔╝',
+        '   ██║   ╚██████╔╝██║  ██║██████╔╝╚██████╔╝██████╔╝███████╗ ╚████╔╝ ',
+        '   ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝  ╚═══╝  ',
+        '',
+        'by Rosario Moscato',
+        `v${version}`,
+        ''
+      ].join('\n')
+    }
+  ]);
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
-  const [streamingContent, setStreamingContent] = useState('');
   const [status, setStatus] = useState('');
+  const [showModelSelector, setShowModelSelector] = useState(false);
+  const [models, setModels] = useState<{id: string}[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const modelsPerPage = 9;
+
+  const totalPages = Math.ceil(models.length / modelsPerPage);
+  const displayedModels = models.slice(currentPage * modelsPerPage, (currentPage + 1) * modelsPerPage);
+
+  const handleModelSelection = (index: number) => {
+    const actualIndex = (currentPage * modelsPerPage) + index;
+    if (actualIndex >= 0 && actualIndex < models.length) {
+      const model = models[actualIndex];
+      saveConfig({ model: model.id });
+      setConfig(loadConfig());
+      setShowModelSelector(false);
+      setCurrentPage(0);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `Model changed to: ${model.id}`
+      }]);
+    }
+  };
+
+  const handleModelNavigation = (action: 'next' | 'prev') => {
+    if (action === 'next' && currentPage < totalPages - 1) {
+      setCurrentPage(prev => prev + 1);
+    } else if (action === 'prev' && currentPage > 0) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
+
+  useInput((input, key) => {
+    if (!showModelSelector) return;
+
+    if (key.escape || input === 'c' || input === 'q') {
+      setShowModelSelector(false);
+      setStatus('');
+      setCurrentPage(0);
+      return;
+    }
+
+    if (key.downArrow || input === 'n' || input === 'j') {
+      handleModelNavigation('next');
+      return;
+    }
+
+    if (key.upArrow || input === 'p' || input === 'k') {
+      handleModelNavigation('prev');
+      return;
+    }
+
+    const num = parseInt(input, 10);
+    if (!Number.isNaN(num) && num > 0 && num <= displayedModels.length) {
+      handleModelSelection(num - 1);
+    }
+  });
 
   const handleUserInput = async (input: string) => {
+    // Handle model selection by number
+    if (showModelSelector) {
+      if (input === 'c' || input === 'q') {
+        setShowModelSelector(false);
+        setStatus('');
+        setCurrentPage(0);
+        return;
+      }
+      if (input === 'n' || input === 'j') {
+        handleModelNavigation('next');
+        return;
+      }
+      if (input === 'p' || input === 'k') {
+        handleModelNavigation('prev');
+        return;
+      }
+      const num = parseInt(input, 10);
+      if (!isNaN(num) && num > 0 && num <= displayedModels.length) {
+        handleModelSelection(num - 1);
+      }
+      return;
+    }
+
     if (input.startsWith('/')) {
       const command = input.slice(1);
 
       if (command === 'help') {
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: 'Commands: /help, /model, /clear, /exit'
+          content: 'Commands: /help, /model (select model), /setup, /clear, /exit'
         }]);
         return;
       }
 
       if (command === 'model') {
+        setStatus('Fetching models...');
+        fetchAvailableModels()
+          .then(fetchedModels => {
+            const popularModels = fetchedModels.filter(m =>
+              ['anthropic/claude-3', 'openai/gpt-4', 'openai/gpt-3.5', 'google/gemini-pro', 'meta-llama/llama-3', 'deepseek/deepseek', 'glm/glm'].some(prefix => m.id.startsWith(prefix))
+            );
+            const sortedModels = popularModels.map(m => ({id: m.id})).sort((a, b) => a.id.localeCompare(b.id));
+            setModels(sortedModels);
+            setShowModelSelector(true);
+            setStatus('');
+          })
+          .catch(err => {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+            content: `Failed to fetch models: ${err.message}`
+            }]);
+            setStatus(''); // Clear status on error too
+            setShowModelSelector(false); // Important: exit selector on error
+            setCurrentPage(0); // Reset page on error too
+          });
+        return;
+      }
+
+      if (command === 'setup') {
+        setSetupNeeded(true);
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: `Current model: ${config.model}`
+          content: 'Setup wizard initiated...'
         }]);
         return;
       }
@@ -53,22 +174,26 @@ export default function App() {
         return;
       }
 
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: `Unknown command: ${command}`
-      }]);
+      if (command.trim()) {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `Unknown command: ${command}`
+        }]);
+      }
       return;
     }
 
     setMessages(prev => [...prev, { role: 'user', content: input }]);
     setStatus('AI thinking...');
 
+    let finalContent = '';
+
     const result = await runAgent(
       input,
       conversationHistory,
       (chunk) => {
         if (chunk.type === 'content') {
-          setStreamingContent(prev => prev + chunk.text);
+          finalContent += chunk.text;
         } else if (chunk.type === 'tool_call') {
           setMessages(prev => [...prev, { role: 'tool_call', content: chunk.text }]);
         } else if (chunk.type === 'tool_result') {
@@ -77,9 +202,8 @@ export default function App() {
       }
     );
 
-    if (streamingContent) {
-      setMessages(prev => [...prev, { role: 'assistant', content: streamingContent }]);
-      setStreamingContent('');
+    if (finalContent) {
+      setMessages(prev => [...prev, { role: 'assistant', content: finalContent }]);
     }
 
     setConversationHistory(result.messages);
@@ -98,14 +222,29 @@ export default function App() {
   }
 
   return (
-    <Box flexDirection="column" height={30} width={100}>
-      <Box flexGrow={1}>
-        <ChatView messages={messages} streamingContent={streamingContent} />
+    <Box flexDirection="column">
+      <Box flexDirection="column">
+        <ChatView messages={messages} />
+        {showModelSelector && (
+          <Box flexDirection="column" alignItems="flex-start" marginY={1}>
+            <Text color="cyan" bold>Select AI Model</Text>
+            <Text color="gray">Page {currentPage + 1}/{totalPages} - Total: {models.length} models</Text>
+            {displayedModels.map((model, index) => {
+              const displayName = model.id.length > 38 ? model.id.slice(0, 35) + '...' : model.id;
+              return (
+                <Box key={model.id}>
+                  <Text color="gray">{index + 1}. {displayName}</Text>
+                </Box>
+              );
+            })}
+            {totalPages > 1 && (
+              <Text color="gray">1-9 select · n/j/↓ next page · p/k/↑ previous · c/q/Esc cancel</Text>
+            )}
+          </Box>
+        )}
       </Box>
-      <Box width={100}>
-        <InputBar onSubmit={handleUserInput} />
-      </Box>
-      <Box width={100}>
+      {!showModelSelector && <InputBar onSubmit={handleUserInput} />}
+      <Box marginTop={1}>
         <StatusBar model={config.model} status={status} />
       </Box>
     </Box>

@@ -1,7 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Box, Text } from 'ink';
-import { ChatMessage } from '../llm/client.js';
-import { AgentStreamChunk } from '../agent/loop.js';
 
 interface MessageDisplay {
   role: 'user' | 'assistant' | 'tool_call' | 'tool_result';
@@ -10,12 +8,9 @@ interface MessageDisplay {
 
 interface Props {
   messages: MessageDisplay[];
-  streamingContent?: string;
 }
 
-export default function ChatView({ messages, streamingContent }: Props) {
-  const scrollRef = useRef(null);
-
+export default function ChatView({ messages }: Props) {
   const getColor = (role: string) => {
     switch (role) {
       case 'user': return 'cyan';
@@ -27,17 +22,12 @@ export default function ChatView({ messages, streamingContent }: Props) {
   };
 
   return (
-    <Box flexDirection="column" width={100} height={20}>
+    <Box flexDirection="column">
       {messages.map((msg, i) => (
-        <Box key={i} width={100}>
+        <Box key={i}>
           <Text color={getColor(msg.role)}>{msg.content}</Text>
         </Box>
       ))}
-      {streamingContent && (
-        <Box width={100}>
-          <Text color="white">{streamingContent}</Text>
-        </Box>
-      )}
     </Box>
   );
 }

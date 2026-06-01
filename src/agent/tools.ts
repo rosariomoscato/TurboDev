@@ -1,13 +1,15 @@
 import { readFileTool, ReadFileArgs } from '../tools/read-file';
 import { listFilesTool, ListFilesArgs } from '../tools/list-files';
 import { editFileTool, EditFileArgs } from '../tools/edit-file';
+import { mkdirTool, MkdirArgs } from '../tools/mkdir';
 
-export type ToolName = 'read_file' | 'list_files' | 'edit_file';
+export type ToolName = 'read_file' | 'list_files' | 'edit_file' | 'mkdir';
 
 export type ToolArgs =
   | ReadFileArgs
   | ListFilesArgs
-  | EditFileArgs;
+  | EditFileArgs
+  | MkdirArgs;
 
 export interface ToolDefinition {
   name: ToolName;
@@ -54,6 +56,15 @@ export const TOOL_REGISTRY: Record<ToolName, ToolDefinition> = {
     Returns: { path: string, action: 'created'|'edited'|'not_found' }
     `.trim(),
     fn: editFileTool
+  },
+  mkdir: {
+    name: 'mkdir',
+    description: `
+    Create a new directory. Creates parent directories if they don't exist.
+    Args: { path: string } - The directory path to create (relative or absolute)
+    Returns: { path: string, action: 'created'|'exists'|'error' }
+    `.trim(),
+    fn: mkdirTool
   }
 };
 

@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { Box, Text } from 'ink';
 import TextInput from 'ink-text-input';
+import SelectInput from 'ink-select-input';
+
+const COMMANDS = [
+  { label: '/help', value: '/help', description: 'Show available commands' },
+  { label: '/model', value: '/model', description: 'Select your model' },
+  { label: '/setup', value: '/setup', description: 'Re-run setup wizard' },
+  { label: '/clear', value: '/clear', description: 'Clear chat history' },
+  { label: '/exit', value: '/exit', description: 'Exit TurboDev' },
+];
 
 interface Props {
   onSubmit: (input: string) => void;
@@ -8,11 +17,24 @@ interface Props {
 
 export default function InputBar({ onSubmit }: Props) {
   const [value, setValue] = useState('');
+  const [showCommands, setShowCommands] = useState(false);
 
   const handleSubmit = () => {
     if (!value.trim()) return;
     onSubmit(value);
     setValue('');
+    setShowCommands(false);
+  };
+
+  const handleCommandSelect = (item: { value: string }) => {
+    onSubmit(item.value);
+    setValue('');
+    setShowCommands(false);
+  };
+
+  const handleChange = (newValue: string) => {
+    setValue(newValue);
+    setShowCommands(newValue === '/');
   };
 
   return (
@@ -22,11 +44,23 @@ export default function InputBar({ onSubmit }: Props) {
         <Text color="gray"> </Text>
         <TextInput
           value={value}
-          onChange={setValue}
+          onChange={handleChange}
           onSubmit={handleSubmit}
           placeholder="Type a message..."
         />
       </Box>
+      {showCommands && (
+        <Box marginTop={0}>
+          <SelectInput
+            items={COMMANDS.map(cmd => ({
+              label: `${cmd.label} — ${cmd.description}`,
+              value: cmd.value,
+              key: cmd.value
+            }))}
+            onSelect={handleCommandSelect}
+          />
+        </Box>
+      )}
     </Box>
   );
 }

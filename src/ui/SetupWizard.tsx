@@ -1,14 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text, Newline, useApp, useInput } from 'ink';
+import { Box, Text, Newline, useApp, useInput, useStdoutDimensions } from 'ink';
 import TextInput from 'ink-text-input';
 import SelectInput from 'ink-select-input';
 import Spinner from 'ink-spinner';
-import { saveConfig } from '../config/store.js';
+import { loadConfig, saveConfig } from '../config/store.js';
 import { fetchAvailableModels, ModelInfo } from '../llm/models.js';
 
 interface Props {
   onComplete: () => void;
 }
+
+// Popular models to show (filtered from OpenRouter's hundreds of models)
+const POPULAR_MODEL_PREFIXES = [
+  'anthropic/claude-3',
+  'openai/gpt-4',
+  'openai/gpt-3.5',
+  'google/gemini-pro',
+  'meta-llama/llama-3',
+  'deepseek/deepseek',
+  'glm/glm',
+];
 
 export default function SetupWizard({ onComplete }: Props) {
   const { exit } = useApp();
@@ -19,14 +30,57 @@ export default function SetupWizard({ onComplete }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Check if API key already exists and skip to model selection
+  useEffect(() => {
+    const config = loadConfig();
+    if (config.apiKey && !config.model) {
+      // API key exists but no model selected, fetch models and go to step 1
+      setApiKey(config.apiKey);
+      setLoading(true);
+      fetchAvailableModels()
+        .then(fetchedModels => {
+          const popularModels = fetchedModels.filter(model =>
+            POPULAR_MODEL_PREFIXES.some(prefix => model.id.startsWith(prefix))
+          );
+          setModels(popularModels);
+          setStep(1);
+        })
+        .catch(err => {
+          setError(`Failed to fetch models: ${err.message}`);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, []);
+
+  // Global handler for Ctrl+C to exit at any time
   useInput((input, key) => {
-    if (step === 2) {
+    // Global handler for Ctrl+C to exit at any time
+    if (key.ctrl && input === 'c') {
+      exit();
+      return;
+    }
+    
+    // Handle exit from setup (Esc or q)
+    if (key.escape || input === 'q') {
+      const config = loadConfig();
+      if (config.apiKey) { // If apiKey exists, assume we can exit setup and proceed
+        onComplete();
+      } else { // Otherwise, exit the app entirely
+        exit();
+      }
+      return; // Stop further processing
+    }
+
+    // Handle step-specific actions
+    if (step === 0) {
+      // API Key submission is handled by TextInput's onSubmit
+    } else if (step === 1) {
+      // Model selection handled by SelectInput's onSelect
+    } else if (step === 2) { // Setup Complete screen
       if (key.return) {
         onComplete();
-      } else if (key.escape || (key.ctrl && input === 'c')) {
-        exit();
-      } else if (input === 'q') {
-        exit();
       }
     }
   });
@@ -42,7 +96,11 @@ export default function SetupWizard({ onComplete }: Props) {
 
     fetchAvailableModels()
       .then(fetchedModels => {
-        setModels(fetchedModels);
+        // Filter to popular models only (avoid overwhelming user with 500+ options)
+        const popularModels = fetchedModels.filter(model =>
+          POPULAR_MODEL_PREFIXES.some(prefix => model.id.startsWith(prefix))
+        );
+        setModels(popularModels);
         setStep(1);
       })
       .catch(err => {
@@ -114,12 +172,15 @@ export default function SetupWizard({ onComplete }: Props) {
       <Box flexDirection="column">
         <Text color="cyan" bold>Select AI Model</Text>
         <Newline />
-        <Text>Choose the model you want to use:</Text>
+        <Text>Showing {models.length} popular models (filtered from all available).</Text>
+        <Text>Use ↑/↓ arrows to navigate, Enter to select:</Text>
         <Newline />
         <SelectInput
           items={items}
           onSelect={handleModelSelect}
         />
+        <Newline />
+        <Text color="gray">Press Ctrl+C to exit</Text>
       </Box>
     );
   }
