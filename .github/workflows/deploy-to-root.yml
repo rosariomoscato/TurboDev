@@ -1,0 +1,59 @@
+name: Deploy VitePress to Custom Domain
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout TurboDev (Source)
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20 # Usa la versione che usi tu, o 18/20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build VitePress
+        run: npm run docs:build
+        # Questo comando crea la cartella docs/.vitepress/dist con il sito pronto
+
+      - name: Checkout rosmoscato (Target)
+        uses: actions/checkout@v3
+        with:
+          repository: rosariomoscato/rosmoscato
+          token: ${{ secrets.DEPLOY_TOKEN }}
+          path: target-repo
+
+      - name: Synchronize files
+        run: |
+          # Definiamo la sorgente (dove VitePress ha costruito il sito)
+          SOURCE_DIR="docs/.vitepress/dist"
+          DEST_DIR="target-repo/turbodev"
+
+          # Crea la cartella di destinazione
+          mkdir -p $DEST_DIR
+          
+          # Pulisce la destinazione vecchia
+          rm -rf $DEST_DIR/*
+          
+          # Copia solo il contenuto della build, non la cartella dist stessa
+          # Usiamo cp con il trucco del punto per copiare il contenuto interno
+          cp -r $SOURCE_DIR/. $DEST_DIR/
+
+      - name: Commit and Push changes
+        run: |
+          cd target-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add turbodev/
+          git commit -m "Auto-update: deploy VitePress build to rosmoscato.xyz/turbodev" || echo "No changes to commit"
+          git push
