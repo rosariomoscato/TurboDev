@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress';
 export default defineConfig({
   title: 'TurboDev',
   description: 'Terminal-based AI coding agent',
-  base: '/TurboDev/',
+  base: '/turbotev/',
 
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
