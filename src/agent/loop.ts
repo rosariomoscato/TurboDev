@@ -1,6 +1,7 @@
 import { chatCompletion, ChatMessage, TimeoutError } from '../llm/client.js';
 import { countMessageTokens } from '../llm/tokens.js';
 import { getContextLength } from '../llm/models.js';
+import { loadConfig } from '../config/store.js';
 import { executeToolCall } from './tools.js';
 import { ToolCallContext } from './tools.js';
 import { extractToolInvocations, formatToolResult } from './parser.js';
