@@ -26,6 +26,7 @@ TurboDev è un agente AI per il coding che funziona interamente nel terminale. P
 - Start dev server: `npm run dev`
 - Build: `npm run build`
 - Start: `npm run start`
+- Run tests: `npm test`
 
 ## Code Style
 

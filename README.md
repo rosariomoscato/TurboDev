@@ -14,15 +14,29 @@ TurboDev is an AI coding agent that runs entirely in the terminal. It lets you c
 
 - **AI Chat in the terminal** — converse with LLM models in real time with streaming
 - **Model selection** — choose from dozens of popular models (DeepSeek, GPT-4, Claude, Gemini, Llama, GLM...)
+- **Multi-agent system** — switch between specialized agents (editor, plan) with a single keypress, or create custom agents via Markdown
+- **Permission system** — fine-grained control over what agents can do (allow, ask, deny)
 - **7 built-in tools** — the AI can read, search, and edit files, run shell commands, and ask you questions
 - **AGENTS.md support** — project context and instructions loaded automatically from the open standard
 - **/init wizard** — generate an AGENTS.md file interactively with auto-detection of project type
+- **Agent system** — primary agents (editor, plan), subagents, custom agents via Markdown files
+- **Permission system** — per-agent allow/ask/deny with bash glob patterns
 - **Markdown rendering** — formatted responses with headings, lists, code blocks, and bold text in the terminal
 - **Guided setup** — interactive configuration of API key and model on first launch
 - **Error handling** — LLM timeout, API errors, and interactive user questions
 - **React/Ink interface** — modern and responsive UI right in the terminal
 
 ## Installation
+
+```bash
+# Install globally via npm
+npm install -g @rosariomoscato/turbodev
+
+# Or run directly without installing
+npx @rosariomoscato/turbodev
+```
+
+### From Source
 
 ```bash
 git clone https://github.com/rosariomoscato/TurboDev.git
@@ -49,6 +63,7 @@ turbodev --setup
 | `/help` | Show available commands |
 | `/init` | Generate AGENTS.md with interactive wizard |
 | `/model` | Select AI model |
+| `/agent` | Switch agent |
 | `/setup` | Re-run setup wizard |
 | `/clear` | Clear chat history |
 | `/exit` | Exit TurboDev |
@@ -69,7 +84,7 @@ turbodev --setup
 
 TurboDev requires an **OpenRouter API key** to work. The setup wizard will guide you through configuration on first launch, or you can launch it with `/setup`.
 
-Configuration is saved in `~/.turbodevrc`.
+Configuration is saved in `~/.config/turbodev/config.json`.
 
 ## AGENTS.md
 
