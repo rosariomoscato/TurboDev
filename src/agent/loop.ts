@@ -17,9 +17,10 @@ export interface AgentResult {
 export async function runAgent(
   userMessage: string,
   conversationHistory: ChatMessage[],
+  projectContext: string | null,
   onStream?: (chunk: AgentStreamChunk) => void
 ): Promise<AgentResult> {
-  const systemPrompt = generateSystemPrompt();
+  const systemPrompt = generateSystemPrompt(projectContext ?? undefined);
   let messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
     ...conversationHistory,

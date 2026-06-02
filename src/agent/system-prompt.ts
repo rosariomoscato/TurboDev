@@ -1,11 +1,11 @@
 import { TOOL_REGISTRY } from './tools';
 
-export function generateSystemPrompt(): string {
+export function generateSystemPrompt(projectContext?: string): string {
   const toolsStr = Object.values(TOOL_REGISTRY)
     .map(tool => `TOOL\n===\nName: ${tool.name}\nDescription: ${tool.description}\n=================\n`)
     .join('\n');
 
-  return `
+  let prompt = `
 You are TurboDev, an AI coding assistant. You help users with coding tasks by reading, listing, and editing files in their project.
 
 You have access to the following tools:
@@ -24,5 +24,19 @@ Example tool call:
 tool: read_file({"filename": "src/index.ts"})
 
 Current working directory: ${process.cwd()}
+
+IMPORTANT: Always respond in the same language the user writes in.
   `.trim();
+
+  if (projectContext) {
+    prompt += `
+
+## Project Context (from AGENTS.md)
+
+${projectContext}
+
+Follow the instructions from AGENTS.md when working on this project.`;
+  }
+
+  return prompt;
 }

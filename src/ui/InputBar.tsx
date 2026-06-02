@@ -5,6 +5,7 @@ import SelectInput from 'ink-select-input';
 
 const COMMANDS = [
   { label: '/help', value: '/help', description: 'Show available commands' },
+  { label: '/init', value: '/init', description: 'Initialize AGENTS.md' },
   { label: '/model', value: '/model', description: 'Select your model' },
   { label: '/setup', value: '/setup', description: 'Re-run setup wizard' },
   { label: '/clear', value: '/clear', description: 'Clear chat history' },

@@ -4,7 +4,9 @@ import { loadConfig, saveConfig } from '../config/store.js';
 import { runAgent } from '../agent/loop.js';
 import { ChatMessage } from '../llm/client.js';
 import { fetchAvailableModels } from '../llm/models.js';
+import { loadAgentsMd } from '../context/agents-md.js';
 import SetupWizard from './SetupWizard.js';
+import InitWizard from './InitWizard.js';
 import ChatView from './ChatView.js';
 import InputBar from './InputBar.js';
 import StatusBar from './StatusBar.js';
@@ -19,6 +21,8 @@ export default function App() {
   const { exit } = useApp();
   const [config, setConfig] = useState(loadConfig());
   const [setupNeeded, setSetupNeeded] = useState(!config.apiKey || !config.model);
+  const [agentsContext, setAgentsContext] = useState<string | null>(() => loadAgentsMd(process.cwd()));
+  const [showInitWizard, setShowInitWizard] = useState(false);
   const [messages, setMessages] = useState<MessageDisplay[]>([
     {
       role: 'assistant',
@@ -125,8 +129,13 @@ export default function App() {
       if (command === 'help') {
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: 'Commands: /help, /model (select model), /setup, /clear, /exit'
+          content: 'Commands: /help, /init, /model (select model), /setup, /clear, /exit'
         }]);
+        return;
+      }
+
+      if (command === 'init') {
+        setShowInitWizard(true);
         return;
       }
 
@@ -191,6 +200,7 @@ export default function App() {
     const result = await runAgent(
       input,
       conversationHistory,
+      agentsContext,
       (chunk) => {
         if (chunk.type === 'content') {
           finalContent += chunk.text;
@@ -209,6 +219,22 @@ export default function App() {
     setConversationHistory(result.messages);
     setStatus('');
   };
+
+  if (showInitWizard) {
+    return (
+      <InitWizard
+        cwd={process.cwd()}
+        onComplete={() => {
+          setAgentsContext(loadAgentsMd(process.cwd()));
+          setShowInitWizard(false);
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: 'AGENTS.md context loaded.'
+          }]);
+        }}
+      />
+    );
+  }
 
   if (setupNeeded) {
     return (
