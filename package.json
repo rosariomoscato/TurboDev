@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "type": "module",
   "description": "Terminal-based AI coding agent",
+  "license": "CC-BY-NC-SA-4.0",
   "bin": {
     "turbodev": "./dist/index.js"
   },
