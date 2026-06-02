@@ -10,6 +10,8 @@
 
 TurboDev is an AI coding agent that runs entirely in the terminal. It lets you chat with LLM models (via OpenRouter), execute tools, manage files and code — all without leaving the CLI.
 
+**Documentation**: [https://rosmoscato.xyz/turbodev/](https://rosmoscato.xyz/turbodev/)
+
 ## Features
 
 - **AI Chat in the terminal** — converse with LLM models in real time with streaming
