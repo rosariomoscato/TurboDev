@@ -223,6 +223,7 @@ export function getAvailableSections(): Array<{
     { id: "setup", label: "Setup Commands", default: true },
     { id: "style", label: "Code Style", default: true },
     { id: "testing", label: "Testing Instructions", default: true },
+    { id: "design", label: "Design", default: false },
     { id: "security", label: "Security Considerations", default: false },
     { id: "deployment", label: "Deployment Notes", default: false },
   ];
@@ -291,6 +292,13 @@ export function generateSectionContent(
         "",
         `- Run tests: \`${testCmd}\``,
         "- Fix any test failures before committing",
+      ].join("\n");
+    }
+    case "design": {
+      return [
+        "## Design",
+        "",
+        "<!-- Describe your design system, UI patterns, color palette, typography, and component conventions here -->",
       ].join("\n");
     }
     case "security": {

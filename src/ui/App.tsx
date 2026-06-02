@@ -23,34 +23,19 @@ export default function App() {
   const [setupNeeded, setSetupNeeded] = useState(!config.apiKey || !config.model);
   const [agentsContext, setAgentsContext] = useState<string | null>(() => loadAgentsMd(process.cwd()));
   const [showInitWizard, setShowInitWizard] = useState(false);
+  const [showBanner, setShowBanner] = useState(true);
 
   const [allAgents] = useState<AgentConfig[]>(() => loadAllAgents(process.cwd()));
   const [primaryAgents] = useState<AgentConfig[]>(() => allAgents.filter(a => a.mode !== 'subagent'));
   const [currentAgentIndex, setCurrentAgentIndex] = useState(0);
   const [currentAgent, setCurrentAgent] = useState<AgentConfig>(() => allAgents.filter(a => a.mode !== 'subagent')[0]);
 
-  const [messages, setMessages] = useState<MessageDisplay[]>([
-    {
-      role: 'assistant',
-      content: [
-        '████████╗██╗   ██╗██████╗ ██████╗  ██████╗ ██████╗ ███████╗██╗   ██╗',
-        '╚══██╔══╝██║   ██║██╔══██╗██╔══██╗██╔═══██╗██╔══██╗██╔════╝██║   ██║',
-        '   ██║   ██║   ██║██████╔╝██████╔╝██║   ██║██║  ██║█████╗  ██║   ██║',
-        '   ██║   ██║   ██║██╔══██╗██╔══██╗██║   ██║██║  ██║██╔══╝  ╚██╗ ██╔╝',
-        '   ██║   ╚██████╔╝██║  ██║██████╔╝╚██████╔╝██████╔╝███████╗ ╚████╔╝ ',
-        '   ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝  ╚═══╝  ',
-        '',
-        'by Rosario Moscato',
-        `v${version}`,
-        '',
-        agentsContext
-          ? `AGENTS.md loaded from ${process.cwd()}/AGENTS.md`
-          : `No AGENTS.md found in ${process.cwd()}/ — use /init to create one`,
-        `Agent: ${allAgents.filter(a => a.mode !== 'subagent')[0]?.name || 'editor'}`,
-        ''
-      ].join('\n')
-    }
-  ]);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowBanner(false), 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const [messages, setMessages] = useState<MessageDisplay[]>([]);
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState('');
   const [showModelSelector, setShowModelSelector] = useState(false);
@@ -411,11 +396,14 @@ export default function App() {
       <InitWizard
         cwd={process.cwd()}
         onComplete={() => {
-          setAgentsContext(loadAgentsMd(process.cwd()));
+          const ctx = loadAgentsMd(process.cwd());
+          setAgentsContext(ctx);
           setShowInitWizard(false);
           setMessages(prev => [...prev, {
             role: 'assistant',
-            content: 'AGENTS.md context loaded.'
+            content: ctx
+              ? `AGENTS.md loaded from ${process.cwd()}/AGENTS.md`
+              : 'AGENTS.md not found.'
           }]);
         }}
       />
@@ -436,6 +424,20 @@ export default function App() {
   return (
     <Box flexDirection="column">
       <Box flexDirection="column">
+        {showBanner && (
+          <Box flexDirection="column" marginBottom={1}>
+            <Text color="cyan">
+{'████████╗██╗   ██╗██████╗ ██████╗  ██████╗ ██████╗ ███████╗██╗   ██╗\n╚══██╔══╝██║   ██║██╔══██╗██╔══██╗██╔═══██╗██╔══██╗██╔════╝██║   ██║\n   ██║   ██║   ██║██████╔╝██████╔╝██║   ██║██║  ██║█████╗  ██║   ██║\n   ██║   ██║   ██║██╔══██╗██╔══██╗██║   ██║██║  ██║██╔══╝  ╚██╗ ██╔╝\n   ██║   ╚██████╔╝██║  ██║██████╔╝╚██████╔╝██████╔╝███████╗ ╚████╔╝\n   ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝  ╚═══╝'}
+            </Text>
+            <Text color="gray">by Rosario Moscato · v{version}</Text>
+            <Text color={agentsContext ? 'green' : 'yellow'}>
+              {agentsContext
+                ? `AGENTS.md loaded`
+                : `No AGENTS.md found — use /init to create one`}
+            </Text>
+            <Text color="gray">Agent: {currentAgent.name}</Text>
+          </Box>
+        )}
         <ChatView messages={messages} />
         {showAgentSelector && (
           <Box flexDirection="column" alignItems="flex-start" marginY={1}>
