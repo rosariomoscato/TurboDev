@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Box, render, useApp, useInput, Text } from 'ink';
+import React, { useState } from 'react';
+import { Box, useApp, useInput, Text } from 'ink';
 import { loadConfig, saveConfig } from '../config/store.js';
 import { runAgent } from '../agent/loop.js';
 import { ChatMessage } from '../llm/client.js';
@@ -10,12 +10,8 @@ import InitWizard from './InitWizard.js';
 import ChatView from './ChatView.js';
 import InputBar from './InputBar.js';
 import StatusBar from './StatusBar.js';
+import { MessageDisplay } from './types.js';
 import { version } from '../../package.json';
-
-interface MessageDisplay {
-  role: 'user' | 'assistant' | 'tool_call' | 'tool_result';
-  content: string;
-}
 
 export default function App() {
   const { exit } = useApp();
@@ -47,6 +43,12 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState(0);
   const modelsPerPage = 9;
 
+  const [pendingQuestion, setPendingQuestion] = useState<{
+    question: string;
+    options?: string[];
+    resolve: (answer: string) => void;
+  } | null>(null);
+
   const totalPages = Math.ceil(models.length / modelsPerPage);
   const displayedModels = models.slice(currentPage * modelsPerPage, (currentPage + 1) * modelsPerPage);
 
@@ -70,6 +72,23 @@ export default function App() {
       setCurrentPage(prev => prev + 1);
     } else if (action === 'prev' && currentPage > 0) {
       setCurrentPage(prev => prev - 1);
+    }
+  };
+
+  const handleQuestion = async (question: string, options?: string[]): Promise<string> => {
+    return new Promise((resolve) => {
+      setPendingQuestion({ question, options, resolve });
+    });
+  };
+
+  const handleQuestionAnswer = (answer: string) => {
+    if (pendingQuestion) {
+      setMessages(prev => [...prev,
+        { role: 'question', content: `? ${pendingQuestion.question}` },
+        { role: 'user', content: answer }
+      ]);
+      pendingQuestion.resolve(answer);
+      setPendingQuestion(null);
     }
   };
 
@@ -100,7 +119,11 @@ export default function App() {
   });
 
   const handleUserInput = async (input: string) => {
-    // Handle model selection by number
+    if (pendingQuestion) {
+      handleQuestionAnswer(input);
+      return;
+    }
+
     if (showModelSelector) {
       if (input === 'c' || input === 'q') {
         setShowModelSelector(false);
@@ -156,9 +179,9 @@ export default function App() {
               role: 'assistant',
             content: `Failed to fetch models: ${err.message}`
             }]);
-            setStatus(''); // Clear status on error too
-            setShowModelSelector(false); // Important: exit selector on error
-            setCurrentPage(0); // Reset page on error too
+            setStatus('');
+            setShowModelSelector(false);
+            setCurrentPage(0);
           });
         return;
       }
@@ -205,18 +228,30 @@ export default function App() {
         if (chunk.type === 'content') {
           finalContent += chunk.text;
         } else if (chunk.type === 'tool_call') {
-          setMessages(prev => [...prev, { role: 'tool_call', content: chunk.text }]);
-        } else if (chunk.type === 'tool_result') {
-          setMessages(prev => [...prev, { role: 'tool_result', content: chunk.text }]);
+          finalContent = '';
         }
-      }
+      },
+      { onQuestion: handleQuestion }
     );
 
-    if (finalContent) {
-      setMessages(prev => [...prev, { role: 'assistant', content: finalContent }]);
+    if (result.error) {
+      const errorPrefix = result.error.type === 'timeout'
+        ? 'Timeout'
+        : result.error.type === 'api_error'
+        ? 'API Error'
+        : 'Error';
+
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `${errorPrefix}: ${result.error!.message}\n\nYou can try sending your message again.`
+      }]);
+    } else {
+      if (finalContent) {
+        setMessages(prev => [...prev, { role: 'assistant', content: finalContent }]);
+      }
+      setConversationHistory(result.messages);
     }
 
-    setConversationHistory(result.messages);
     setStatus('');
   };
 
@@ -269,7 +304,15 @@ export default function App() {
           </Box>
         )}
       </Box>
-      {!showModelSelector && <InputBar onSubmit={handleUserInput} />}
+      {pendingQuestion ? (
+        <Box flexDirection="column">
+          <Text color="magenta" bold>? {pendingQuestion.question}</Text>
+          {pendingQuestion.options?.map((opt, i) => (
+            <Text key={i} color="gray">  {i + 1}. {opt}</Text>
+          ))}
+          <InputBar onSubmit={handleQuestionAnswer} />
+        </Box>
+      ) : !showModelSelector && <InputBar onSubmit={handleUserInput} />}
       <Box marginTop={1}>
         <StatusBar model={config.model} status={status} />
       </Box>

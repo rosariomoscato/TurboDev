@@ -1,6 +1,15 @@
 import OpenAI from 'openai';
 import { loadConfig } from '../config/store.js';
 
+const DEFAULT_TIMEOUT_MS = 120_000;
+
+export class TimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`LLM request timed out after ${timeoutMs}ms`);
+    this.name = 'TimeoutError';
+  }
+}
+
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -26,7 +35,8 @@ function createOpenRouterClient(): OpenAI {
 
 export async function* chatCompletion(
   messages: ChatMessage[],
-  model?: string
+  model?: string,
+  timeoutMs?: number
 ): AsyncGenerator<StreamChunk> {
   const config = loadConfig();
   const client = createOpenRouterClient();
@@ -36,13 +46,18 @@ export async function* chatCompletion(
     throw new Error('No model selected. Please run setup: turbodev --setup');
   }
 
+  const signal = AbortSignal.timeout(timeoutMs ?? DEFAULT_TIMEOUT_MS);
+
   try {
-    const stream = await client.chat.completions.create({
-      model: modelToUse,
-      messages: messages,
-      stream: true,
-      temperature: 0.7
-    });
+    const stream = await client.chat.completions.create(
+      {
+        model: modelToUse,
+        messages: messages,
+        stream: true,
+        temperature: 0.7
+      },
+      { signal }
+    );
 
     for await (const chunk of stream) {
       const content = chunk.choices[0]?.delta?.content || '';
@@ -50,6 +65,9 @@ export async function* chatCompletion(
       yield { content, done };
     }
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new TimeoutError(timeoutMs ?? DEFAULT_TIMEOUT_MS);
+    }
     if (error instanceof OpenAI.APIError) {
       throw new Error(`OpenRouter API error: ${error.message}`);
     }

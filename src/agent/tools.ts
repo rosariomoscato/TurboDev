@@ -2,14 +2,20 @@ import { readFileTool, ReadFileArgs } from '../tools/read-file';
 import { listFilesTool, ListFilesArgs } from '../tools/list-files';
 import { editFileTool, EditFileArgs } from '../tools/edit-file';
 import { mkdirTool, MkdirArgs } from '../tools/mkdir';
+import { grepTool, GrepArgs } from '../tools/grep';
+import { bashTool, BashArgs } from '../tools/bash';
+import { questionTool, QuestionArgs } from '../tools/question';
 
-export type ToolName = 'read_file' | 'list_files' | 'edit_file' | 'mkdir';
+export type ToolName = 'read_file' | 'list_files' | 'edit_file' | 'mkdir' | 'grep' | 'bash' | 'question';
 
 export type ToolArgs =
   | ReadFileArgs
   | ListFilesArgs
   | EditFileArgs
-  | MkdirArgs;
+  | MkdirArgs
+  | GrepArgs
+  | BashArgs
+  | QuestionArgs;
 
 export interface ToolDefinition {
   name: ToolName;
@@ -65,6 +71,41 @@ export const TOOL_REGISTRY: Record<ToolName, ToolDefinition> = {
     Returns: { path: string, action: 'created'|'exists'|'error' }
     `.trim(),
     fn: mkdirTool
+  },
+  grep: {
+    name: 'grep',
+    description: `
+    Search file contents using regular expressions.
+    Args: { pattern: string, include?: string, path?: string }
+      - pattern: Regex pattern to search for
+      - include: File glob filter (e.g. "*.ts", "*.{ts,tsx}"). Optional.
+      - path: Directory to search in. Defaults to current directory. Optional.
+    Returns: { matches: [{ file: string, line: number, content: string }], total: number, truncated: boolean }
+    `.trim(),
+    fn: grepTool
+  },
+  bash: {
+    name: 'bash',
+    description: `
+    Execute a shell command and return its output.
+    Args: { command: string, timeout?: number, workdir?: string }
+      - command: The shell command to execute
+      - timeout: Timeout in milliseconds (default: 30000). Optional.
+      - workdir: Working directory for the command. Defaults to current directory. Optional.
+    Returns: { stdout: string, stderr: string, exitCode: number|null, timedOut: boolean, command: string }
+    `.trim(),
+    fn: bashTool
+  },
+  question: {
+    name: 'question',
+    description: `
+    Ask the user a question and wait for their response. Use this to clarify ambiguous instructions or get decisions.
+    Args: { question: string, options?: string[] }
+      - question: The question text to present to the user
+      - options: Optional list of suggested answers the user can choose from
+    Returns: { question: string, answer: string }
+    `.trim(),
+    fn: questionTool
   }
 };
 
