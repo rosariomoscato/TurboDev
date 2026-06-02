@@ -32,6 +32,10 @@ export default function App() {
         '',
         'by Rosario Moscato',
         `v${version}`,
+        '',
+        agentsContext
+          ? `AGENTS.md loaded from ${process.cwd()}/AGENTS.md`
+          : `No AGENTS.md found in ${process.cwd()}/ — use /init to create one`,
         ''
       ].join('\n')
     }
