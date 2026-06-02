@@ -64,6 +64,19 @@ Project detection looks for:
 
 ## General Issues
 
+### AI freezes or takes too long
+
+Press **Escape** to cancel the current request. The input bar will return and you can retry or rephrase your message.
+
+If the issue persists:
+- The model might be generating a very long response — try a faster model
+- The context window might be full — use `/compact` to summarize the conversation
+- Check your network connection to OpenRouter
+
+### Request cancelled message
+
+If you see `Request cancelled. You can try sending your message again.` — you (or a timeout) interrupted the request. Simply resend your message.
+
 ### TurboDev is slow
 
 - Try a faster model (e.g., `anthropic/claude-haiku-4-20250514`)

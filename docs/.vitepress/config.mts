@@ -40,6 +40,8 @@ export default defineConfig({
                 { text: 'Terminal UI', link: '/en/usage/' },
                 { text: 'Commands', link: '/en/usage/commands' },
                 { text: 'Keyboard Shortcuts', link: '/en/usage/shortcuts' },
+                { text: 'Sessions', link: '/en/usage/sessions' },
+                { text: 'Context Window', link: '/en/usage/context-window' },
               ],
             },
             {
@@ -96,6 +98,8 @@ export default defineConfig({
                 { text: 'Terminale', link: '/it/utilizzo/' },
                 { text: 'Comandi', link: '/it/utilizzo/comandi' },
                 { text: 'Scorciatoie', link: '/it/utilizzo/scorciatoie' },
+                { text: 'Sessioni', link: '/it/utilizzo/sessioni' },
+                { text: 'Finestra di contesto', link: '/it/utilizzo/finestra-contesto' },
               ],
             },
             {

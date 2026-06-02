@@ -12,6 +12,10 @@ Get started with TurboDev.
 - **Permission System** — Fine-grained control over what agents can do
 - **Tool Integration** — Read, edit, create files, run bash commands, search code
 - **Context-Aware** — Automatic project analysis via `AGENTS.md`
+- **Session Persistence** — Conversations are saved and can be resumed across restarts
+- **Context Window Management** — Live token tracking, auto-compaction, and manual `/compact`
+- **Real-time Cost Tracking** — See how much you're spending in the status bar
+- **Request Interruption** — Press Escape to cancel a running AI request
 
 ## Prerequisites
 

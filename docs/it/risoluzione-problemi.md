@@ -64,6 +64,19 @@ Il rilevamento del progetto cerca:
 
 ## Problemi generali
 
+### L'AI si blocca o ci mette troppo
+
+Premi **Escape** per cancellare la richiesta corrente. La barra di input riapparirà e potrai riprovare o riformulare il messaggio.
+
+Se il problema persiste:
+- Il modello potrebbe star generando una risposta molto lunga — prova un modello più veloce
+- La finestra di contesto potrebbe essere piena — usa `/compact` per riassumere la conversazione
+- Verifica la connessione di rete a OpenRouter
+
+### Messaggio "Request cancelled"
+
+Se vedi `Request cancelled. You can try sending your message again.` — tu (o un timeout) hai interrotto la richiesta. Invia semplicemente di nuovo il messaggio.
+
 ### TurboDev è lento
 
 - Prova un modello più veloce (es. `anthropic/claude-haiku-4-20250514`)

@@ -8,6 +8,7 @@ interface Props {
   agent?: AgentConfig;
   tokenCount?: number;
   contextLength?: number;
+  sessionCost?: number;
 }
 
 function mapAgentColor(color?: string): string {
@@ -45,7 +46,14 @@ function AnimatedThinking({ text }: { text: string }) {
   return <Text color="yellow" bold>{SPINNER_FRAMES[frame]} {text}</Text>;
 }
 
-export default function StatusBar({ model, status, agent, tokenCount, contextLength }: Props) {
+function formatCost(cost: number): string {
+  if (cost < 0.001) return `$${cost.toFixed(6)}`;
+  if (cost < 0.01) return `$${cost.toFixed(4)}`;
+  if (cost < 1) return `$${cost.toFixed(3)}`;
+  return `$${cost.toFixed(2)}`;
+}
+
+export default function StatusBar({ model, status, agent, tokenCount, contextLength, sessionCost }: Props) {
   const columns = process.stdout.columns || 100;
   const width = Math.max(40, columns - 2);
   const isThinking = status === 'AI thinking...';
@@ -68,6 +76,12 @@ export default function StatusBar({ model, status, agent, tokenCount, contextLen
         <>
           <Text color="gray"> | </Text>
           <Text color={tokenColor}>{formatTokens(tokenCount)}/{formatTokens(contextLength)}</Text>
+        </>
+      ) : null}
+      {sessionCost !== undefined && sessionCost > 0 ? (
+        <>
+          <Text color="gray"> | </Text>
+          <Text color="magenta">{formatCost(sessionCost)}</Text>
         </>
       ) : null}
       {isThinking ? (

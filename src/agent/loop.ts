@@ -1,5 +1,5 @@
 import { chatCompletion, ChatMessage, TimeoutError } from '../llm/client.js';
-import { countMessageTokens } from '../llm/tokens.js';
+import { countMessageTokens, estimateTokens } from '../llm/tokens.js';
 import { getContextLength } from '../llm/models.js';
 import { loadConfig } from '../config/store.js';
 import { executeToolCall } from './tools.js';
@@ -24,6 +24,8 @@ export interface AgentResult {
   toolCalls: number;
   tokenCount: number;
   contextLength: number;
+  inputTokens: number;
+  outputTokens: number;
   error?: {
     type: 'timeout' | 'api_error' | 'unknown';
     message: string;
@@ -36,7 +38,8 @@ export async function runAgent(
   projectContext: string | null,
   agent: AgentConfig,
   onStream?: (chunk: AgentStreamChunk) => void,
-  callbacks?: AgentCallbacks
+  callbacks?: AgentCallbacks,
+  abortSignal?: AbortSignal
 ): Promise<AgentResult> {
   const systemPrompt = generateSystemPrompt(projectContext ?? undefined, agent);
   let messages: ChatMessage[] = [
@@ -47,6 +50,8 @@ export async function runAgent(
 
   let fullAssistantResponse = '';
   let totalToolCalls = 0;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
   let steps = 0;
   const maxSteps = agent.steps;
 
@@ -70,7 +75,9 @@ export async function runAgent(
 
       let assistantResponse = '';
 
-      for await (const chunk of chatCompletion(messages, agent.model, undefined, llmOptions)) {
+      const inputBeforeCall = countMessageTokens(messages);
+
+      for await (const chunk of chatCompletion(messages, agent.model, undefined, llmOptions, abortSignal)) {
         if (chunk.content) {
           assistantResponse += chunk.content;
           fullAssistantResponse += chunk.content;
@@ -81,6 +88,9 @@ export async function runAgent(
           });
         }
       }
+
+      totalInputTokens += inputBeforeCall;
+      totalOutputTokens += estimateTokens(assistantResponse);
 
       messages.push({
         role: 'assistant',
@@ -143,6 +153,8 @@ export async function runAgent(
         toolCalls: totalToolCalls,
         tokenCount: 0,
         contextLength: 0,
+        inputTokens: totalInputTokens,
+        outputTokens: totalOutputTokens,
         error: {
           type: 'timeout',
           message: error.message
@@ -150,15 +162,19 @@ export async function runAgent(
       };
     }
 
+    const isCancelled = error instanceof Error && error.message === 'Request cancelled by user';
+
     return {
       messages,
       assistantResponse: fullAssistantResponse,
       toolCalls: totalToolCalls,
       tokenCount: 0,
       contextLength: 0,
+      inputTokens: totalInputTokens,
+      outputTokens: totalOutputTokens,
       error: {
-        type: error instanceof Error && error.message.includes('API error') ? 'api_error' : 'unknown',
-        message: error instanceof Error ? error.message : String(error)
+        type: isCancelled ? 'api_error' : (error instanceof Error && error.message.includes('API error') ? 'api_error' : 'unknown'),
+        message: isCancelled ? 'Cancelled by user' : (error instanceof Error ? error.message : String(error))
       }
     };
   }
@@ -172,6 +188,8 @@ export async function runAgent(
     assistantResponse: fullAssistantResponse,
     toolCalls: totalToolCalls,
     tokenCount,
-    contextLength
+    contextLength,
+    inputTokens: totalInputTokens,
+    outputTokens: totalOutputTokens
   };
 }

@@ -13,4 +13,5 @@ export interface Session {
   agentName: string;
   tokenCount: number;
   contextLength: number;
+  totalCost: number;
 }

@@ -8,7 +8,7 @@ Naviga TurboDev in modo efficiente.
 |-------|--------|
 | `Invio` | Invia messaggio / Conferma |
 | `Tab` | Passa da un agente primario all'altro |
-| `Escape` | Annulla l'azione corrente |
+| `Escape` | Annulla l'azione corrente / **Interrompi la richiesta AI** |
 
 ## Selettore modelli
 
@@ -25,6 +25,20 @@ Naviga TurboDev in modo efficiente.
 |-------|--------|
 | `1`–`9` | Seleziona agente |
 | `Esc` | Annulla |
+
+## Selettore sessioni
+
+| Tasto | Azione |
+|-------|--------|
+| `1`–`9` | Seleziona sessione da ripristinare |
+| `Esc` | Annulla |
+
+## Prompt sessione all'avvio
+
+| Tasto | Azione |
+|-------|--------|
+| `y` | Riprendi la sessione precedente |
+| `n` | Inizia una nuova sessione vuota |
 
 ## Menu comandi
 

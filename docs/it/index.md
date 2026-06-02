@@ -12,6 +12,10 @@ Inizia a usare TurboDev.
 - **Sistema di permessi** — Controllo granulare sulle azioni degli agenti
 - **Integrazione strumenti** — Leggi, modifica, crea file, esegui comandi bash, cerca nel codice
 - **Contesto automatico** — Analisi del progetto tramite `AGENTS.md`
+- **Persistenza delle sessioni** — Le conversazioni vengono salvate e riprendibili tra un riavvio e l'altro
+- **Gestione della finestra di contesto** — Tracciamento token in tempo reale, auto-compattazione e `/compact` manuale
+- **Tracciamento costi in tempo reale** — Visualizza la spesa nella barra di stato
+- **Interruzione delle richieste** — Premi Escape per cancellare una richiesta AI in corso
 
 ## Prerequisiti
 

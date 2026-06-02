@@ -37,7 +37,8 @@ export async function* chatCompletion(
   messages: ChatMessage[],
   model?: string,
   timeoutMs?: number,
-  options?: { temperature?: number; topP?: number }
+  options?: { temperature?: number; topP?: number },
+  externalSignal?: AbortSignal
 ): AsyncGenerator<StreamChunk> {
   const config = loadConfig();
   const client = createOpenRouterClient();
@@ -47,7 +48,10 @@ export async function* chatCompletion(
     throw new Error('No model selected. Please run setup: turbodev --setup');
   }
 
-  const signal = AbortSignal.timeout(timeoutMs ?? DEFAULT_TIMEOUT_MS);
+  const timeoutSignal = AbortSignal.timeout(timeoutMs ?? DEFAULT_TIMEOUT_MS);
+  const signals = externalSignal
+    ? AbortSignal.any([timeoutSignal, externalSignal])
+    : timeoutSignal;
 
   try {
     const stream = await client.chat.completions.create(
@@ -58,7 +62,7 @@ export async function* chatCompletion(
         temperature: options?.temperature ?? 0.7,
         ...(options?.topP !== undefined && { top_p: options.topP })
       },
-      { signal }
+      { signal: signals }
     );
 
     for await (const chunk of stream) {
@@ -68,9 +72,15 @@ export async function* chatCompletion(
     }
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
+      if (externalSignal?.aborted) {
+        throw new Error('Request cancelled by user');
+      }
       throw new TimeoutError(timeoutMs ?? DEFAULT_TIMEOUT_MS);
     }
     if (error instanceof OpenAI.APIError) {
+      if (externalSignal?.aborted || (error.message && error.message.toLowerCase().includes('aborted'))) {
+        throw new Error('Request cancelled by user');
+      }
       throw new Error(`OpenRouter API error: ${error.message}`);
     }
     throw error;

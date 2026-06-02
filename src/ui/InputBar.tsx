@@ -6,6 +6,7 @@ import SelectInput from 'ink-select-input';
 const COMMANDS = [
   { label: '/agent', value: '/agent', description: 'Switch agent' },
   { label: '/clear', value: '/clear', description: 'Clear chat history' },
+  { label: '/compact', value: '/compact', description: 'Compact conversation' },
   { label: '/exit', value: '/exit', description: 'Exit TurboDev' },
   { label: '/help', value: '/help', description: 'Show available commands' },
   { label: '/init', value: '/init', description: 'Initialize AGENTS.md' },

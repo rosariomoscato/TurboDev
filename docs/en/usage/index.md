@@ -14,7 +14,7 @@ TurboDev opens an interactive terminal session with:
 - **Banner** — ASCII art logo, AGENTS.md status, and current agent (shown for 5 seconds)
 - **Chat area** — Conversation history
 - **Input bar** — Shows current agent name, type your messages here
-- **Status bar** — Current model, agent name and color, thinking indicator
+- **Status bar** — Model, agent, token usage, cost, thinking indicator
 
 ## The Status Bar
 
@@ -24,7 +24,23 @@ The status bar at the bottom shows:
 |---------|-------------|
 | Model ID | Current LLM model |
 | Agent name | Current agent with its color |
+| Token usage | `X.XXK/YK` — tokens used / context window size |
+| Cost | Cumulative session cost (e.g. `$0.0023`) |
 | Spinner | Braille animation while the AI is thinking |
+
+### Token Usage Indicator
+
+Token usage is color-coded:
+
+| Color | Meaning |
+|-------|---------|
+| Green | Below 50% of context window |
+| Yellow | 50%–75% of context window |
+| Red | Above 75% — auto-compaction triggers at 85% |
+
+### Cost Tracking
+
+The cost is calculated in real-time based on the model's per-token pricing from OpenRouter. It accumulates across all messages in the session and is persisted when the session is saved.
 
 ## Agent Colors
 
@@ -68,6 +84,22 @@ Agents can ask you questions:
 ```
 
 Type your answer and press Enter.
+
+## Session Persistence
+
+When you launch TurboDev and a previous session exists, you'll be prompted:
+
+```
+Resume previous session?
+  My feature (4 min fa, 12 messages)
+  [y/n]
+```
+
+Press `y` to restore the previous session, or `n` to start fresh. Sessions are automatically saved after every message exchange to `.turbodev/sessions/`.
+
+## Interrupting Requests
+
+While the AI is processing (spinner visible), you can press **Escape** to cancel the request immediately. The input bar is hidden during processing to prevent overlapping messages.
 
 ## Flow
 

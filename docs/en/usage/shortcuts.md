@@ -8,7 +8,7 @@ Navigate TurboDev efficiently.
 |-----|--------|
 | `Enter` | Send message / Confirm |
 | `Tab` | Switch between primary agents |
-| `Escape` | Cancel current action |
+| `Escape` | Cancel current action / **Interrupt AI request** |
 
 ## Model Selector
 
@@ -25,6 +25,20 @@ Navigate TurboDev efficiently.
 |-----|--------|
 | `1`–`9` | Select agent |
 | `Esc` | Cancel |
+
+## Session Selector
+
+| Key | Action |
+|-----|--------|
+| `1`–`9` | Select session to restore |
+| `Esc` | Cancel |
+
+## Startup Session Prompt
+
+| Key | Action |
+|-----|--------|
+| `y` | Resume previous session |
+| `n` | Start a new empty session |
 
 ## Command Menu
 

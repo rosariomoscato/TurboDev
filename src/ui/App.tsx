@@ -3,7 +3,7 @@ import { Box, useApp, useInput, Text } from 'ink';
 import { loadConfig, saveConfig } from '../config/store.js';
 import { runAgent } from '../agent/loop.js';
 import { ChatMessage } from '../llm/client.js';
-import { fetchAvailableModels } from '../llm/models.js';
+import { fetchAvailableModels, getModelPricing } from '../llm/models.js';
 import { loadAgentsMd } from '../context/agents-md.js';
 import { loadAllAgents } from '../agent/registry.js';
 import { createTaskTool } from '../tools/task.js';
@@ -62,6 +62,7 @@ export default function App() {
   const [status, setStatus] = useState('');
   const [tokenCount, setTokenCount] = useState(0);
   const [contextLength, setContextLength] = useState(0);
+  const [sessionCost, setSessionCost] = useState(0);
   const [sessionId, setSessionId] = useState<string>('');
   const [sessionTitle, setSessionTitle] = useState('');
   const [sessionCreatedAt, setSessionCreatedAt] = useState('');
@@ -93,6 +94,7 @@ export default function App() {
   const primaryAgentsRef = useRef(primaryAgents);
 
   const compactionNotified = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (showSessionPrompt) return;
@@ -112,6 +114,7 @@ export default function App() {
       agentName: currentAgent.name,
       tokenCount: tokens,
       contextLength: ctxLen,
+      totalCost: sessionCost,
     });
   }
 
@@ -123,6 +126,10 @@ export default function App() {
 
   useEffect(() => {
     registerTaskTool(createTaskTool(process.cwd(), currentAgent, runAgent));
+  }, []);
+
+  useEffect(() => {
+    fetchAvailableModels().catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -237,6 +244,13 @@ export default function App() {
       return;
     }
 
+    if (key.escape && status && abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setStatus('');
+      return;
+    }
+
     if (key.tab && !isInputMode && !pendingQuestion && !pendingPermission) {
       const agents = primaryAgentsRef.current;
       const nextIndex = (currentAgentIndex + 1) % agents.length;
@@ -316,6 +330,9 @@ export default function App() {
   ) => {
     let finalContent = '';
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     const result = await runAgent(
       input,
       history,
@@ -328,11 +345,20 @@ export default function App() {
           finalContent = '';
         }
       },
-      { onQuestion: handleQuestion, onPermissionAsk: handlePermissionAsk }
+      { onQuestion: handleQuestion, onPermissionAsk: handlePermissionAsk },
+      controller.signal
     );
+
+    abortControllerRef.current = null;
 
     return { result, finalContent };
   };
+
+  function calcCost(inputTokens: number, outputTokens: number, modelId: string): number {
+    const pricing = getModelPricing(modelId);
+    if (!pricing) return 0;
+    return (inputTokens * pricing.prompt) + (outputTokens * pricing.completion);
+  }
 
   const restoreSession = (session: Session) => {
     setSessionId(session.id);
@@ -340,6 +366,7 @@ export default function App() {
     setSessionCreatedAt(session.createdAt);
     setTokenCount(session.tokenCount);
     setContextLength(session.contextLength);
+    setSessionCost(session.totalCost || 0);
     setMessages(session.messages.map(m => ({
       role: m.role as any,
       content: m.content,
@@ -440,7 +467,7 @@ export default function App() {
       if (command === 'help') {
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: 'Commands: /help, /init, /model, /agent, /setup, /clear, /new, /sessions, /exit\nTab: switch agent'
+          content: 'Commands: /help, /init, /model, /agent, /setup, /clear, /compact, /new, /sessions, /exit\nTab: switch agent'
         }]);
         return;
       }
@@ -494,6 +521,39 @@ export default function App() {
         return;
       }
 
+      if (command === 'compact') {
+        if (conversationHistory.length === 0) {
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: 'Nothing to compact — conversation is empty.'
+          }]);
+          return;
+        }
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: 'Compacting conversation...'
+        }]);
+        try {
+          const { newMessages } = await compactConversation(
+            conversationHistory,
+            currentAgent.model || config.model
+          );
+          setConversationHistory(newMessages);
+          setTokenCount(0);
+          compactionNotified.current = false;
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: 'Conversation compacted successfully.'
+          }]);
+        } catch {
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: 'Compaction failed. Continuing with full context.'
+          }]);
+        }
+        return;
+      }
+
       if (command === 'new') {
         autoSave(messages, tokenCount, contextLength);
         const newId = generateSessionId();
@@ -504,6 +564,7 @@ export default function App() {
         setConversationHistory([]);
         setTokenCount(0);
         setContextLength(0);
+        setSessionCost(0);
         return;
       }
 
@@ -549,6 +610,7 @@ export default function App() {
 
         setTokenCount(result.tokenCount);
         setContextLength(result.contextLength);
+        setSessionCost(prev => prev + calcCost(result.inputTokens, result.outputTokens, mentionedAgent.model || config.model));
 
         if (result.error) {
           setMessages(prev => [...prev, {
@@ -576,23 +638,21 @@ export default function App() {
 
     setTokenCount(result.tokenCount);
     setContextLength(result.contextLength);
+    setSessionCost(prev => prev + calcCost(result.inputTokens, result.outputTokens, currentAgent.model || config.model));
 
     if (result.error) {
-      const errorPrefix = result.error.type === 'timeout'
-        ? 'Timeout'
-        : result.error.type === 'api_error'
-        ? 'API Error'
-        : 'Error';
-
+      const isCancelled = result.error.message === 'Cancelled by user';
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: `${errorPrefix}: ${result.error!.message}\n\nYou can try sending your message again.`
+        content: isCancelled
+          ? 'Request cancelled. You can try sending your message again.'
+          : `${result.error!.message}\n\nYou can try sending your message again.`
       }]);
     } else {
       if (finalContent) {
         setMessages(prev => [...prev, { role: 'assistant', content: finalContent }]);
       }
-      setConversationHistory(result.messages);
+      setConversationHistory(result.messages.filter(m => m.role !== 'system'));
     }
 
     setStatus('');
@@ -704,7 +764,7 @@ export default function App() {
           </Box>
         )}
       </Box>
-      {!isInputMode && !showSessionPrompt && (
+      {!isInputMode && !showSessionPrompt && !status && (
         <Box flexDirection="column">
           {pendingPermission && (
             <>
@@ -727,7 +787,7 @@ export default function App() {
         </Box>
       )}
       <Box marginTop={1}>
-        <StatusBar model={config.model} status={status} agent={currentAgent} tokenCount={tokenCount} contextLength={contextLength} />
+        <StatusBar model={config.model} status={status} agent={currentAgent} tokenCount={tokenCount} contextLength={contextLength} sessionCost={sessionCost} />
       </Box>
     </Box>
   );

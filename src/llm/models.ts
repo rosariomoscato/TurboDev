@@ -6,20 +6,35 @@ export interface ModelInfo {
   name: string;
   description?: string;
   contextLength?: number;
+  promptPrice?: number;
+  completionPrice?: number;
+}
+
+export interface ModelPricing {
+  prompt: number;
+  completion: number;
 }
 
 const contextLengthCache = new Map<string, number>();
+const pricingCache = new Map<string, ModelPricing>();
 
 export function cacheContextLengths(models: ModelInfo[]): void {
   for (const model of models) {
     if (model.contextLength) {
       contextLengthCache.set(model.id, model.contextLength);
     }
+    if (model.promptPrice !== undefined && model.completionPrice !== undefined) {
+      pricingCache.set(model.id, { prompt: model.promptPrice, completion: model.completionPrice });
+    }
   }
 }
 
 export function getContextLength(modelId: string): number {
   return contextLengthCache.get(modelId) ?? 128000;
+}
+
+export function getModelPricing(modelId: string): ModelPricing | null {
+  return pricingCache.get(modelId) ?? null;
 }
 
 export async function fetchAvailableModels(): Promise<ModelInfo[]> {
@@ -41,7 +56,9 @@ export async function fetchAvailableModels(): Promise<ModelInfo[]> {
       id: model.id,
       name: model.id,
       description: model.description,
-      contextLength: model.context_length
+      contextLength: model.context_length,
+      promptPrice: model.pricing?.prompt ? parseFloat(model.pricing.prompt) : undefined,
+      completionPrice: model.pricing?.completion ? parseFloat(model.pricing.completion) : undefined,
     }));
 
     cacheContextLengths(models);

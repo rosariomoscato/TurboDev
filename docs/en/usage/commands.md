@@ -14,6 +14,9 @@ All commands start with `/`. Type `/` in the input bar to see available commands
 | `/agent` | Open agent selector |
 | `/setup` | Re-run setup wizard |
 | `/clear` | Clear chat history |
+| `/compact` | Compact the conversation to free context window |
+| `/new` | Start a new session |
+| `/sessions` | List and switch between sessions |
 | `/exit` | Exit TurboDev |
 
 ## /init
@@ -66,6 +69,34 @@ Clears the entire chat history and conversation context.
 ```
 /clear
 ```
+
+## /compact
+
+Compacts the conversation by summarizing it via AI. This frees up space in the context window, allowing longer sessions without losing the conversation's key points.
+
+```
+/compact
+```
+
+Auto-compaction triggers at **85%** of the context window. You'll be notified at **75%**. Use `/compact` manually at any time.
+
+## /new
+
+Starts a new empty session. The current session is saved automatically and can be resumed later with `/sessions`.
+
+```
+/new
+```
+
+## /sessions
+
+Lists all saved sessions sorted by most recent. Select a session by number to restore it.
+
+```
+/sessions
+```
+
+Shows each session with its title, relative time, and message count. Press `Esc` to cancel.
 
 ## /exit
 
