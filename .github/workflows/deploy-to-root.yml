@@ -1,10 +1,10 @@
-name: Deploy to Custom Domain Root
+name: Deploy VitePress to Custom Domain
 
 on:
   push:
     branches:
-      - master  # Ho impostato master perché il tuo file esistente usa master
-  workflow_dispatch: # Permette di lanciarlo a mano
+      - master
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -12,6 +12,19 @@ jobs:
     steps:
       - name: Checkout TurboDev (Source)
         uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20 # Usa la versione che usi tu, o 18/20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build VitePress
+        run: npm run docs:build
+        # Questo comando crea la cartella docs/.vitepress/dist con il sito pronto
 
       - name: Checkout rosmoscato (Target)
         uses: actions/checkout@v3
@@ -22,21 +35,25 @@ jobs:
 
       - name: Synchronize files
         run: |
-          # Crea la cartella di destinazione se non esiste
-          mkdir -p target-repo/turbodev
-          # Elimina il contenuto precedente nella cartella turbodev
-          rm -rf target-repo/turbodev/*
-          # Copia tutti i file (esclusa la cartella .git e la cartella target-repo stessa)
-          # Usiamo rsync o un loop per evitare di copiare la cartella di destinazione dentro se stessa
-          for file in $(ls -A | grep -v '^target-repo$' | grep -v '^\.git$'); do
-            cp -r "$file" target-repo/turbodev/
-          done
+          # Definiamo la sorgente (dove VitePress ha costruito il sito)
+          SOURCE_DIR="docs/.vitepress/dist"
+          DEST_DIR="target-repo/turbodev"
+
+          # Crea la cartella di destinazione
+          mkdir -p $DEST_DIR
           
+          # Pulisce la destinazione vecchia
+          rm -rf $DEST_DIR/*
+          
+          # Copia solo il contenuto della build, non la cartella dist stessa
+          # Usiamo cp con il trucco del punto per copiare il contenuto interno
+          cp -r $SOURCE_DIR/. $DEST_DIR/
+
       - name: Commit and Push changes
         run: |
           cd target-repo
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add turbodev/
-          git commit -m "Auto-update: sync TurboDev to rosmoscato.xyz/turbodev" || echo "No changes to commit"
+          git commit -m "Auto-update: deploy VitePress build to rosmoscato.xyz/turbodev" || echo "No changes to commit"
           git push
