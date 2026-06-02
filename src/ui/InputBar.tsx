@@ -10,6 +10,8 @@ const COMMANDS = [
   { label: '/help', value: '/help', description: 'Show available commands' },
   { label: '/init', value: '/init', description: 'Initialize AGENTS.md' },
   { label: '/model', value: '/model', description: 'Select your model' },
+  { label: '/new', value: '/new', description: 'Start new session' },
+  { label: '/sessions', value: '/sessions', description: 'List and switch sessions' },
   { label: '/setup', value: '/setup', description: 'Re-run setup wizard' },
 ];
 

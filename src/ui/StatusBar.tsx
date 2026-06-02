@@ -24,8 +24,10 @@ function truncate(text: string, max: number) {
 }
 
 function formatTokens(count: number): string {
-  if (count >= 1000) return `${Math.round(count / 1000)}K`;
-  return String(count);
+  const k = count / 1000;
+  if (k >= 100) return `${Math.round(k)}K`;
+  if (k >= 1) return `${k.toFixed(k < 10 ? 2 : 1)}K`;
+  return `${k.toFixed(2)}K`;
 }
 
 const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];

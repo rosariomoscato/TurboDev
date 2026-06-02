@@ -16,6 +16,11 @@ import InputBar from './InputBar.js';
 import StatusBar from './StatusBar.js';
 import { MessageDisplay } from './types.js';
 import { compactConversation } from '../agent/compaction.js';
+import { generateSystemPrompt } from '../agent/system-prompt.js';
+import { estimateTokens } from '../llm/tokens.js';
+import { getContextLength } from '../llm/models.js';
+import { saveSession, loadSession, listSessions, getLatestSession, generateSessionId, generateTitle, deleteSession } from '../session/store.js';
+import type { Session } from '../session/types.js';
 import { version } from '../../package.json';
 
 const versionString = `v${version}${__GIT_HASH__ !== 'dev' ? ` (${__GIT_HASH__})` : ''}`;
@@ -23,6 +28,20 @@ const versionString = `v${version}${__GIT_HASH__ !== 'dev' ? ` (${__GIT_HASH__})
 function formatTokens(count: number): string {
   if (count >= 1000) return `${Math.round(count / 1000)}K`;
   return String(count);
+}
+
+function relativeTime(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'ora';
+  if (diffMin < 60) return `${diffMin} min fa`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `${diffH}h fa`;
+  const diffD = Math.floor(diffH / 24);
+  if (diffD === 1) return 'ieri';
+  return `${diffD}g fa`;
 }
 
 export default function App() {
@@ -38,16 +57,18 @@ export default function App() {
   const [currentAgentIndex, setCurrentAgentIndex] = useState(0);
   const [currentAgent, setCurrentAgent] = useState<AgentConfig>(() => allAgents.filter(a => a.mode !== 'subagent' && !a.hidden)[0]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setShowBanner(false), 5000);
-    return () => clearTimeout(timer);
-  }, []);
-
   const [messages, setMessages] = useState<MessageDisplay[]>([]);
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState('');
   const [tokenCount, setTokenCount] = useState(0);
   const [contextLength, setContextLength] = useState(0);
+  const [sessionId, setSessionId] = useState<string>('');
+  const [sessionTitle, setSessionTitle] = useState('');
+  const [sessionCreatedAt, setSessionCreatedAt] = useState('');
+  const [showSessionSelector, setShowSessionSelector] = useState(false);
+  const [sessionList, setSessionList] = useState<Session[]>([]);
+  const [showSessionPrompt, setShowSessionPrompt] = useState(false);
+  const [pendingSession, setPendingSession] = useState<Session | null>(null);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [showAgentSelector, setShowAgentSelector] = useState(false);
   const [models, setModels] = useState<{id: string}[]>([]);
@@ -74,7 +95,48 @@ export default function App() {
   const compactionNotified = useRef(false);
 
   useEffect(() => {
+    if (showSessionPrompt) return;
+    const timer = setTimeout(() => setShowBanner(false), 5000);
+    return () => clearTimeout(timer);
+  }, [showSessionPrompt]);
+
+  function autoSave(msgs: MessageDisplay[], tokens: number, ctxLen: number) {
+    if (!sessionId) return;
+    const now = new Date().toISOString();
+    saveSession(process.cwd(), {
+      id: sessionId,
+      title: sessionTitle || 'New session',
+      createdAt: sessionCreatedAt || now,
+      updatedAt: now,
+      messages: msgs.map(m => ({ role: m.role, content: m.content, agentName: m.agentName })),
+      agentName: currentAgent.name,
+      tokenCount: tokens,
+      contextLength: ctxLen,
+    });
+  }
+
+  useEffect(() => {
+    if (sessionId && messages.length > 0) {
+      autoSave(messages, tokenCount, contextLength);
+    }
+  }, [messages, tokenCount, contextLength]);
+
+  useEffect(() => {
     registerTaskTool(createTaskTool(process.cwd(), currentAgent, runAgent));
+  }, []);
+
+  useEffect(() => {
+    const latest = getLatestSession(process.cwd());
+    if (latest) {
+      setPendingSession(latest);
+      setShowSessionPrompt(true);
+    } else {
+      setSessionId(generateSessionId());
+      setSessionCreatedAt(new Date().toISOString());
+      const sysPrompt = generateSystemPrompt(agentsContext ?? undefined, currentAgent);
+      setTokenCount(estimateTokens(sysPrompt));
+      setContextLength(getContextLength(currentAgent.model || config.model));
+    }
   }, []);
 
   const totalPages = Math.ceil(models.length / modelsPerPage);
@@ -156,9 +218,25 @@ export default function App() {
     setShowAgentSelector(false);
   };
 
-  const isInputMode = showModelSelector || showAgentSelector;
+  const isInputMode = showModelSelector || showAgentSelector || showSessionSelector;
 
   useInput((input, key) => {
+    if (showSessionPrompt) {
+      const answer = input.toLowerCase();
+      if (answer === 'y' || answer === 's') {
+        if (pendingSession) restoreSession(pendingSession);
+      } else if (answer === 'n') {
+        setSessionId(generateSessionId());
+        setSessionCreatedAt(new Date().toISOString());
+        const sysPrompt = generateSystemPrompt(agentsContext ?? undefined, currentAgent);
+        setTokenCount(estimateTokens(sysPrompt));
+        setContextLength(getContextLength(currentAgent.model || config.model));
+      }
+      setShowSessionPrompt(false);
+      setPendingSession(null);
+      return;
+    }
+
     if (key.tab && !isInputMode && !pendingQuestion && !pendingPermission) {
       const agents = primaryAgentsRef.current;
       const nextIndex = (currentAgentIndex + 1) % agents.length;
@@ -172,6 +250,37 @@ export default function App() {
         return;
       }
       handleAgentSelection(input);
+      return;
+    }
+
+    if (showSessionSelector) {
+      if (key.escape) {
+        setShowSessionSelector(false);
+        return;
+      }
+      const num = parseInt(input, 10);
+      if (!isNaN(num) && num > 0 && num <= sessionList.length) {
+        const session = sessionList[num - 1];
+        autoSave(messages, tokenCount, contextLength);
+        setSessionId(session.id);
+        setSessionTitle(session.title);
+        setSessionCreatedAt(session.createdAt);
+        setTokenCount(session.tokenCount);
+        setContextLength(session.contextLength);
+        const restoredMessages = session.messages.map(m => ({
+          role: m.role as any,
+          content: m.content,
+          ...(m.agentName ? { agentName: m.agentName } : {})
+        }));
+        setMessages(restoredMessages);
+        const history = session.messages
+          .filter(m => m.role === 'user' || m.role === 'assistant')
+          .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+        setConversationHistory(history);
+        const agent = allAgents.find(a => a.name === session.agentName);
+        if (agent) setCurrentAgent(agent);
+        setShowSessionSelector(false);
+      }
       return;
     }
 
@@ -225,6 +334,26 @@ export default function App() {
     return { result, finalContent };
   };
 
+  const restoreSession = (session: Session) => {
+    setSessionId(session.id);
+    setSessionTitle(session.title);
+    setSessionCreatedAt(session.createdAt);
+    setTokenCount(session.tokenCount);
+    setContextLength(session.contextLength);
+    setMessages(session.messages.map(m => ({
+      role: m.role as any,
+      content: m.content,
+      ...(m.agentName ? { agentName: m.agentName } : {})
+    })));
+    setConversationHistory(
+      session.messages
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+    );
+    const agent = allAgents.find(a => a.name === session.agentName);
+    if (agent) setCurrentAgent(agent);
+  };
+
   const handleUserInput = async (input: string) => {
     if (pendingPermission) {
       handlePermissionAnswer(input);
@@ -260,6 +389,10 @@ export default function App() {
       if (!isNaN(num) && num > 0 && num <= displayedModels.length) {
         handleModelSelection(num - 1);
       }
+      return;
+    }
+
+    if (showSessionSelector) {
       return;
     }
 
@@ -307,7 +440,7 @@ export default function App() {
       if (command === 'help') {
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: 'Commands: /help, /init, /model, /agent, /setup, /clear, /exit\nTab: switch agent'
+          content: 'Commands: /help, /init, /model, /agent, /setup, /clear, /new, /sessions, /exit\nTab: switch agent'
         }]);
         return;
       }
@@ -361,6 +494,26 @@ export default function App() {
         return;
       }
 
+      if (command === 'new') {
+        autoSave(messages, tokenCount, contextLength);
+        const newId = generateSessionId();
+        setSessionId(newId);
+        setSessionTitle('');
+        setSessionCreatedAt(new Date().toISOString());
+        setMessages([]);
+        setConversationHistory([]);
+        setTokenCount(0);
+        setContextLength(0);
+        return;
+      }
+
+      if (command === 'sessions') {
+        const sessions = listSessions(process.cwd());
+        setSessionList(sessions);
+        setShowSessionSelector(true);
+        return;
+      }
+
       if (command === 'exit') {
         exit();
         return;
@@ -373,6 +526,10 @@ export default function App() {
         }]);
       }
       return;
+    }
+
+    if (!sessionTitle && !input.startsWith('/')) {
+      setSessionTitle(generateTitle(input));
     }
 
     const mentionMatch = input.match(/^@([\w-]+)(?:\s+(.*))?$/);
@@ -494,6 +651,13 @@ export default function App() {
             <Text color="gray">Agent: {currentAgent.name}</Text>
           </Box>
         )}
+        {showSessionPrompt && pendingSession && (
+          <Box flexDirection="column" marginTop={1}>
+            <Text color="cyan" bold>Resume previous session?</Text>
+            <Text color="gray">  {pendingSession.title || 'Untitled'} ({relativeTime(pendingSession.updatedAt)}, {pendingSession.messages.length} messages)</Text>
+            <Text color="gray">  [y/n]</Text>
+          </Box>
+        )}
         <ChatView messages={messages} />
         {showAgentSelector && (
           <Box flexDirection="column" alignItems="flex-start" marginY={1}>
@@ -506,6 +670,20 @@ export default function App() {
               </Box>
             ))}
             <Text color="gray">1-{primaryAgents.length} select · Esc cancel</Text>
+          </Box>
+        )}
+        {showSessionSelector && (
+          <Box flexDirection="column" alignItems="flex-start" marginY={1}>
+            <Text color="cyan" bold>Sessions</Text>
+            {sessionList.map((s, i) => (
+              <Box key={s.id}>
+                <Text color={s.id === sessionId ? 'green' : 'gray'}>
+                  {i + 1}. {s.title || 'Untitled'} <Text dimColor>({relativeTime(s.updatedAt)})</Text>
+                  {s.id === sessionId ? ' (current)' : ''}
+                </Text>
+              </Box>
+            ))}
+            <Text color="gray">1-{sessionList.length} select · Esc cancel</Text>
           </Box>
         )}
         {showModelSelector && (
@@ -526,7 +704,7 @@ export default function App() {
           </Box>
         )}
       </Box>
-      {!isInputMode && (
+      {!isInputMode && !showSessionPrompt && (
         <Box flexDirection="column">
           {pendingPermission && (
             <>
