@@ -1,37 +1,37 @@
-# CRITICAL RULES - MUST FOLLOW
+# AGENTS.md
 
-## RESPONSES
+## Project Overview
 
-- Keep responses concise and to the point - unless the user asks otherwise
+<!-- Describe your project here -->
 
-## PLANNING MODE
+> # TurboDev
 
-- Always ask clarifying questions
-- Never assume design, tech stack or features
-- Use deep-dive sub-agents to assist with research
-- Use deep-dive sub-agents to review the different aspects of your plan before presenting to the user
+**Terminal-based AI coding agent** — il tuo coding partner nel terminale.
 
-## CHANGE / EDIT MODE
+<p align="center">
+  <img src="assets/TurboDev2.png" alt="TurboDev Screenshot" width="700" />
+</p>
 
-- Never implement features yourself when possible - use sub-agents!
-- Identify changes from the plan that can be implemented in parallel, and use sub-agents to implement the features efficiently
-- When using sub-agents to implement features, act as a coordinator only
-- Use the best model for the task - premium models for complex tasks (like coding) and mid-tier models for simpler tasks, like documentation
-- After completing features (large or small), always run commands like lint, type check and next build to check code quality
+## Cos'è
 
-## DATABASE SCHEMA CHANGES
+TurboDev è un agente AI per il coding che funziona interamente nel terminale. Permette di chattare con modelli LLM (via OpenRouter), eseguire tool, gestire file e codice — tutto senza uscire dalla CLI.
 
-- Whenever you make changes to the database schema, ALWAYS run the drizzle generate and migrate commands
-- NEVER run drizzle push!
--For all ID columns NOT related to BetterAuth, use UUID for the ID columns and be randomly generated
+## Funzionalità
 
-## TESTING
+- **Chat AI nel terminale** — conversa con modelli LLM in tempo reale con streaming
 
-- Use any testing tools, libraries available to the project for testing your changes
-- Never assume your changes simply work, always test!
-- If the project does not have any testing tools, scripts, MCP tools, skills, etc. available for testing, ask the user whether testing should be skipped.
+## Setup Commands
 
-## UI DESIGN
+- Install dependencies: `npm install`
+- Start dev server: `npm run dev`
+- Build: `npm run build`
+- Start: `npm run start`
 
-- Always follow the UI design system when creating or reviewing components or pages.
-- Design System: @DESIGN.md
+## Code Style
+
+<!-- Add your code style guidelines here -->
+
+## Testing Instructions
+
+- Run tests: `npm test`
+- Fix any test failures before committing
