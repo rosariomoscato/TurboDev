@@ -4,19 +4,21 @@ import TextInput from 'ink-text-input';
 import SelectInput from 'ink-select-input';
 
 const COMMANDS = [
+  { label: '/agent', value: '/agent', description: 'Switch agent' },
+  { label: '/clear', value: '/clear', description: 'Clear chat history' },
+  { label: '/exit', value: '/exit', description: 'Exit TurboDev' },
   { label: '/help', value: '/help', description: 'Show available commands' },
   { label: '/init', value: '/init', description: 'Initialize AGENTS.md' },
   { label: '/model', value: '/model', description: 'Select your model' },
   { label: '/setup', value: '/setup', description: 'Re-run setup wizard' },
-  { label: '/clear', value: '/clear', description: 'Clear chat history' },
-  { label: '/exit', value: '/exit', description: 'Exit TurboDev' },
 ];
 
 interface Props {
   onSubmit: (input: string) => void;
+  agentName?: string;
 }
 
-export default function InputBar({ onSubmit }: Props) {
+export default function InputBar({ onSubmit, agentName }: Props) {
   const [value, setValue] = useState('');
   const [showCommands, setShowCommands] = useState(false);
 
@@ -41,7 +43,7 @@ export default function InputBar({ onSubmit }: Props) {
   return (
     <Box flexDirection="column">
       <Box>
-        <Text color="cyan" bold>You:</Text>
+        <Text color="cyan" bold>You{agentName ? ` (${agentName})` : ''}:</Text>
         <Text color="gray"> </Text>
         <TextInput
           value={value}

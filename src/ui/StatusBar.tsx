@@ -1,9 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text } from 'ink';
+import { AgentConfig } from '../agent/types.js';
 
 interface Props {
   model?: string;
   status?: string;
+  agent?: AgentConfig;
+}
+
+function mapAgentColor(color?: string): string {
+  const colorMap: Record<string, string> = {
+    cyan: 'cyan', yellow: 'yellow', green: 'green',
+    red: 'red', magenta: 'magenta', blue: 'blue', gray: 'gray',
+  };
+  if (!color) return 'cyan';
+  return colorMap[color] || 'cyan';
 }
 
 function truncate(text: string, max: number) {
@@ -38,17 +49,18 @@ function AnimatedThinking({ text }: { text: string }) {
   );
 }
 
-export default function StatusBar({ model, status }: Props) {
+export default function StatusBar({ model, status, agent }: Props) {
   const columns = process.stdout.columns || 100;
   const width = Math.max(40, columns - 2);
-  const base = 'TurboDev | ';
   const isThinking = status === 'AI thinking...';
   const suffix = isThinking ? ' | ' : status ? ` | ${status}` : '';
-  const modelText = truncate(model || 'No model', Math.max(10, width - base.length - suffix.length - 4));
+  const modelText = truncate(model || 'No model', Math.max(10, width - suffix.length - 4));
 
   return (
     <Box borderStyle="single" paddingX={1} width={width}>
       <Text color="gray">TurboDev</Text>
+      <Text color="gray"> | </Text>
+      <Text color={mapAgentColor(agent?.color)}>{agent?.name || 'editor'}</Text>
       <Text color="gray"> | </Text>
       <Text color="cyan">{modelText}</Text>
       {isThinking ? (

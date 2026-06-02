@@ -1,12 +1,20 @@
 import { TOOL_REGISTRY } from './tools';
+import { AgentConfig } from './types.js';
 
-export function generateSystemPrompt(projectContext?: string): string {
-  const toolsStr = Object.values(TOOL_REGISTRY)
+export function generateSystemPrompt(projectContext?: string, agent?: AgentConfig): string {
+  const toolsToInclude = Object.values(TOOL_REGISTRY).filter(tool => {
+    if (!agent?.tools) return true;
+    if (agent.tools[tool.name] === false) return false;
+    return true;
+  });
+
+  const toolsStr = toolsToInclude
     .map(tool => `TOOL\n===\nName: ${tool.name}\nDescription: ${tool.description}\n=================\n`)
     .join('\n');
 
-  let prompt = `
-You are TurboDev, an AI coding assistant. You help users with coding tasks by reading, listing, and editing files in their project.
+  const identitySuffix = agent ? ` You are currently acting as the "${agent.name}" agent.` : '';
+
+  let prompt = `${agent?.prompt ? agent.prompt + '\n\n' : ''}You are TurboDev, an AI coding assistant.${identitySuffix} You help users with coding tasks by reading, listing, and editing files in their project.
 
 You have access to the following tools:
 
@@ -25,8 +33,11 @@ tool: read_file({"filename": "src/index.ts"})
 
 Current working directory: ${process.cwd()}
 
-IMPORTANT: Always respond in the same language the user writes in.
-  `.trim();
+IMPORTANT: Always respond in the same language the user writes in.`;
+
+  if (agent?.permission?.edit === 'ask') {
+    prompt += '\n\nNOTE: File edits and bash commands require user approval. Call the tools normally — the system asks the user automatically. If a tool is denied, acknowledge briefly and do NOT retry or ask the user yourself.';
+  }
 
   if (projectContext) {
     prompt += `

@@ -1,14 +1,17 @@
 import { chatCompletion, ChatMessage, TimeoutError } from '../llm/client.js';
 import { executeToolCall } from './tools.js';
+import { ToolCallContext } from './tools.js';
 import { extractToolInvocations, formatToolResult } from './parser.js';
 import { generateSystemPrompt } from './system-prompt.js';
+import { AgentConfig } from './types.js';
 
 export interface AgentCallbacks {
   onQuestion?: (question: string, options?: string[]) => Promise<string>;
+  onPermissionAsk?: (tool: string, detail?: string) => Promise<boolean>;
 }
 
 export interface AgentStreamChunk {
-  type: 'content' | 'tool_call' | 'tool_result' | 'question';
+  type: 'content' | 'tool_call' | 'tool_result' | 'question' | 'permission_ask';
   text: string;
 }
 
@@ -26,10 +29,11 @@ export async function runAgent(
   userMessage: string,
   conversationHistory: ChatMessage[],
   projectContext: string | null,
+  agent: AgentConfig,
   onStream?: (chunk: AgentStreamChunk) => void,
   callbacks?: AgentCallbacks
 ): Promise<AgentResult> {
-  const systemPrompt = generateSystemPrompt(projectContext ?? undefined);
+  const systemPrompt = generateSystemPrompt(projectContext ?? undefined, agent);
   let messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
     ...conversationHistory,
@@ -38,12 +42,30 @@ export async function runAgent(
 
   let fullAssistantResponse = '';
   let totalToolCalls = 0;
+  let steps = 0;
+  const maxSteps = agent.steps;
+
+  const toolContext: ToolCallContext = {
+    agent,
+    onPermissionAsk: callbacks?.onPermissionAsk,
+  };
+
+  const llmOptions: { temperature?: number; topP?: number } = {};
+  if (agent.temperature !== undefined) llmOptions.temperature = agent.temperature;
+  if (agent.topP !== undefined) llmOptions.topP = agent.topP;
 
   try {
     while (true) {
+      steps++;
+      if (maxSteps && steps > maxSteps) {
+        const summaryMsg = `Maximum steps (${maxSteps}) reached. Here is a summary of work done so far:\n\n${fullAssistantResponse}`;
+        fullAssistantResponse = summaryMsg;
+        break;
+      }
+
       let assistantResponse = '';
 
-      for await (const chunk of chatCompletion(messages)) {
+      for await (const chunk of chatCompletion(messages, agent.model, undefined, llmOptions)) {
         if (chunk.content) {
           assistantResponse += chunk.content;
           fullAssistantResponse += chunk.content;
@@ -93,7 +115,7 @@ export async function runAgent(
             text: `tool: ${invocation.name}(${JSON.stringify(invocation.args)})`
           });
 
-          const result = await executeToolCall(invocation as any);
+          const result = await executeToolCall(invocation as any, toolContext);
           const resultText = formatToolResult(result);
 
           onStream?.({

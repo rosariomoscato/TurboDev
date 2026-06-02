@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, useApp, useInput, Text } from 'ink';
 import { loadConfig, saveConfig } from '../config/store.js';
 import { runAgent } from '../agent/loop.js';
 import { ChatMessage } from '../llm/client.js';
 import { fetchAvailableModels } from '../llm/models.js';
 import { loadAgentsMd } from '../context/agents-md.js';
+import { loadAllAgents } from '../agent/registry.js';
+import { createTaskTool } from '../tools/task.js';
+import { registerTaskTool } from '../agent/tools.js';
+import type { AgentConfig } from '../agent/types.js';
 import SetupWizard from './SetupWizard.js';
 import InitWizard from './InitWizard.js';
 import ChatView from './ChatView.js';
@@ -19,6 +23,12 @@ export default function App() {
   const [setupNeeded, setSetupNeeded] = useState(!config.apiKey || !config.model);
   const [agentsContext, setAgentsContext] = useState<string | null>(() => loadAgentsMd(process.cwd()));
   const [showInitWizard, setShowInitWizard] = useState(false);
+
+  const [allAgents] = useState<AgentConfig[]>(() => loadAllAgents(process.cwd()));
+  const [primaryAgents] = useState<AgentConfig[]>(() => allAgents.filter(a => a.mode !== 'subagent'));
+  const [currentAgentIndex, setCurrentAgentIndex] = useState(0);
+  const [currentAgent, setCurrentAgent] = useState<AgentConfig>(() => allAgents.filter(a => a.mode !== 'subagent')[0]);
+
   const [messages, setMessages] = useState<MessageDisplay[]>([
     {
       role: 'assistant',
@@ -36,6 +46,7 @@ export default function App() {
         agentsContext
           ? `AGENTS.md loaded from ${process.cwd()}/AGENTS.md`
           : `No AGENTS.md found in ${process.cwd()}/ — use /init to create one`,
+        `Agent: ${allAgents.filter(a => a.mode !== 'subagent')[0]?.name || 'editor'}`,
         ''
       ].join('\n')
     }
@@ -52,6 +63,21 @@ export default function App() {
     options?: string[];
     resolve: (answer: string) => void;
   } | null>(null);
+
+  const [pendingPermission, setPendingPermission] = useState<{
+    tool: string;
+    detail?: string;
+    resolve: (allowed: boolean) => void;
+  } | null>(null);
+
+  const currentAgentRef = useRef(currentAgent);
+  currentAgentRef.current = currentAgent;
+
+  const primaryAgentsRef = useRef(primaryAgents);
+
+  useEffect(() => {
+    registerTaskTool(createTaskTool(process.cwd(), currentAgent, runAgent));
+  }, []);
 
   const totalPages = Math.ceil(models.length / modelsPerPage);
   const displayedModels = models.slice(currentPage * modelsPerPage, (currentPage + 1) * modelsPerPage);
@@ -96,7 +122,42 @@ export default function App() {
     }
   };
 
+  const handlePermissionAsk = async (tool: string, detail?: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      setPendingPermission({ tool, detail, resolve });
+    });
+  };
+
+  const handlePermissionAnswer = (answer: string) => {
+    if (pendingPermission) {
+      const approved = answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes';
+      setMessages(prev => [...prev, {
+        role: 'user' as const,
+        content: approved ? 'Allowed' : 'Denied'
+      }]);
+      pendingPermission.resolve(approved);
+      setPendingPermission(null);
+    }
+  };
+
+  const switchAgent = (agent: AgentConfig, index: number) => {
+    setCurrentAgent(agent);
+    setCurrentAgentIndex(index);
+    registerTaskTool(createTaskTool(process.cwd(), agent, runAgent));
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: `Switched to agent: ${agent.name}`
+    }]);
+  };
+
   useInput((input, key) => {
+    if (key.tab && !showModelSelector && !pendingQuestion && !pendingPermission) {
+      const agents = primaryAgentsRef.current;
+      const nextIndex = (currentAgentIndex + 1) % agents.length;
+      switchAgent(agents[nextIndex], nextIndex);
+      return;
+    }
+
     if (!showModelSelector) return;
 
     if (key.escape || input === 'c' || input === 'q') {
@@ -122,7 +183,37 @@ export default function App() {
     }
   });
 
+  const runAgentWithAgent = async (
+    input: string,
+    agent: AgentConfig,
+    history: ChatMessage[]
+  ) => {
+    let finalContent = '';
+
+    const result = await runAgent(
+      input,
+      history,
+      agentsContext,
+      agent,
+      (chunk) => {
+        if (chunk.type === 'content') {
+          finalContent += chunk.text;
+        } else if (chunk.type === 'tool_call') {
+          finalContent = '';
+        }
+      },
+      { onQuestion: handleQuestion, onPermissionAsk: handlePermissionAsk }
+    );
+
+    return { result, finalContent };
+  };
+
   const handleUserInput = async (input: string) => {
+    if (pendingPermission) {
+      handlePermissionAnswer(input);
+      return;
+    }
+
     if (pendingQuestion) {
       handleQuestionAnswer(input);
       return;
@@ -156,7 +247,7 @@ export default function App() {
       if (command === 'help') {
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: 'Commands: /help, /init, /model (select model), /setup, /clear, /exit'
+          content: 'Commands: /help, /init, /model, /agent, /setup, /clear, /exit\nTab: switch agent'
         }]);
         return;
       }
@@ -190,6 +281,24 @@ export default function App() {
         return;
       }
 
+      if (command === 'agent') {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: 'Available agents:\n' + primaryAgents.map((a, i) =>
+            `${i + 1}. ${a.name} — ${a.description}${a.name === currentAgent.name ? ' (current)' : ''}`
+          ).join('\n') + '\n\nType /<number> to switch (e.g. /2)'
+        }]);
+        return;
+      }
+
+      const agentNum = parseInt(command, 10);
+      if (!isNaN(agentNum)) {
+        if (agentNum > 0 && agentNum <= primaryAgents.length) {
+          switchAgent(primaryAgents[agentNum - 1], agentNum - 1);
+          return;
+        }
+      }
+
       if (command === 'setup') {
         setSetupNeeded(true);
         setMessages(prev => [...prev, {
@@ -219,24 +328,44 @@ export default function App() {
       return;
     }
 
+    const mentionMatch = input.match(/^@([\w-]+)(?:\s+(.*))?$/);
+    if (mentionMatch) {
+      const agentName = mentionMatch[1];
+      const message = mentionMatch[2] || '';
+      const mentionedAgent = allAgents.find(a => a.name === agentName);
+
+      if (mentionedAgent) {
+        setMessages(prev => [...prev, {
+          role: 'user',
+          content: `@${agentName}: ${message}`
+        }]);
+        setStatus(`@${agentName} thinking...`);
+
+        const { result, finalContent } = await runAgentWithAgent(message || 'Hello', mentionedAgent, []);
+
+        if (result.error) {
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: `Error: ${result.error!.message}`,
+            agentName: mentionedAgent.name
+          }]);
+        } else if (finalContent) {
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: finalContent,
+            agentName: mentionedAgent.name
+          }]);
+        }
+
+        setStatus('');
+        return;
+      }
+    }
+
     setMessages(prev => [...prev, { role: 'user', content: input }]);
     setStatus('AI thinking...');
 
-    let finalContent = '';
-
-    const result = await runAgent(
-      input,
-      conversationHistory,
-      agentsContext,
-      (chunk) => {
-        if (chunk.type === 'content') {
-          finalContent += chunk.text;
-        } else if (chunk.type === 'tool_call') {
-          finalContent = '';
-        }
-      },
-      { onQuestion: handleQuestion }
-    );
+    const { result, finalContent } = await runAgentWithAgent(input, currentAgent, conversationHistory);
 
     if (result.error) {
       const errorPrefix = result.error.type === 'timeout'
@@ -258,6 +387,12 @@ export default function App() {
 
     setStatus('');
   };
+
+  const activeOnSubmit = pendingPermission
+    ? handlePermissionAnswer
+    : pendingQuestion
+    ? handleQuestionAnswer
+    : handleUserInput;
 
   if (showInitWizard) {
     return (
@@ -308,17 +443,30 @@ export default function App() {
           </Box>
         )}
       </Box>
-      {pendingQuestion ? (
+      {!showModelSelector && (
         <Box flexDirection="column">
-          <Text color="magenta" bold>? {pendingQuestion.question}</Text>
-          {pendingQuestion.options?.map((opt, i) => (
-            <Text key={i} color="gray">  {i + 1}. {opt}</Text>
-          ))}
-          <InputBar onSubmit={handleQuestionAnswer} />
+          {pendingPermission && (
+            <>
+              <Text color="red" bold>? Allow {pendingPermission.tool}?</Text>
+              {pendingPermission.detail && (
+                <Text color="gray">  Command: {pendingPermission.detail}</Text>
+              )}
+              <Text color="gray">  [y/n]</Text>
+            </>
+          )}
+          {pendingQuestion && (
+            <>
+              <Text color="magenta" bold>? {pendingQuestion.question}</Text>
+              {pendingQuestion.options?.map((opt, i) => (
+                <Text key={i} color="gray">  {i + 1}. {opt}</Text>
+              ))}
+            </>
+          )}
+          <InputBar onSubmit={activeOnSubmit} agentName={currentAgent.name} />
         </Box>
-      ) : !showModelSelector && <InputBar onSubmit={handleUserInput} />}
+      )}
       <Box marginTop={1}>
-        <StatusBar model={config.model} status={status} />
+        <StatusBar model={config.model} status={status} agent={currentAgent} />
       </Box>
     </Box>
   );

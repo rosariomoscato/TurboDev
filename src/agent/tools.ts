@@ -5,8 +5,10 @@ import { mkdirTool, MkdirArgs } from '../tools/mkdir';
 import { grepTool, GrepArgs } from '../tools/grep';
 import { bashTool, BashArgs } from '../tools/bash';
 import { questionTool, QuestionArgs } from '../tools/question';
+import type { AgentConfig } from './types.js';
+import { resolveToolPermission } from './permissions.js';
 
-export type ToolName = 'read_file' | 'list_files' | 'edit_file' | 'mkdir' | 'grep' | 'bash' | 'question';
+export type ToolName = 'read_file' | 'list_files' | 'edit_file' | 'mkdir' | 'grep' | 'bash' | 'question' | 'task';
 
 export type ToolArgs =
   | ReadFileArgs
@@ -26,6 +28,11 @@ export interface ToolDefinition {
 export interface ToolCall {
   name: ToolName;
   args: ToolArgs;
+}
+
+export interface ToolCallContext {
+  agent: AgentConfig;
+  onPermissionAsk?: (tool: string, detail?: string) => Promise<boolean>;
 }
 
 export interface ToolResult {
@@ -106,10 +113,19 @@ export const TOOL_REGISTRY: Record<ToolName, ToolDefinition> = {
     Returns: { question: string, answer: string }
     `.trim(),
     fn: questionTool
+  },
+  task: {
+    name: 'task',
+    description: 'Invoke a subagent for a specialized task.\nArgs: { agent: string, prompt: string, description: string }\nReturns: { result: string, agent: string }',
+    fn: async () => ({ result: 'Task tool not configured', agent: 'unknown' })
   }
 };
 
-export async function executeToolCall(call: ToolCall): Promise<ToolResult> {
+export function registerTaskTool(fn: (args: any) => Promise<any>): void {
+  TOOL_REGISTRY.task.fn = fn;
+}
+
+export async function executeToolCall(call: ToolCall, context?: ToolCallContext): Promise<ToolResult> {
   const tool = TOOL_REGISTRY[call.name];
   if (!tool) {
     return {
@@ -117,6 +133,38 @@ export async function executeToolCall(call: ToolCall): Promise<ToolResult> {
       result: null,
       error: `Unknown tool: ${call.name}`
     };
+  }
+
+  if (context) {
+    const bashCommand = call.name === 'bash' ? (call.args as any).command : undefined;
+    const permission = resolveToolPermission(call.name, context.agent, bashCommand);
+
+    if (permission === 'deny') {
+      return {
+        success: false,
+        result: null,
+        error: `Tool "${call.name}" is denied for agent "${context.agent.name}"`
+      };
+    }
+
+    if (permission === 'ask') {
+      if (!context.onPermissionAsk) {
+        return {
+          success: false,
+          result: null,
+          error: `Tool "${call.name}" requires permission but no onPermissionAsk handler is provided`
+        };
+      }
+
+      const allowed = await context.onPermissionAsk(call.name, bashCommand);
+      if (!allowed) {
+        return {
+          success: false,
+          result: null,
+          error: `Tool "${call.name}" permission denied by user for agent "${context.agent.name}"`
+        };
+      }
+    }
   }
 
   try {

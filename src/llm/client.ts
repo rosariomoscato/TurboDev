@@ -36,7 +36,8 @@ function createOpenRouterClient(): OpenAI {
 export async function* chatCompletion(
   messages: ChatMessage[],
   model?: string,
-  timeoutMs?: number
+  timeoutMs?: number,
+  options?: { temperature?: number; topP?: number }
 ): AsyncGenerator<StreamChunk> {
   const config = loadConfig();
   const client = createOpenRouterClient();
@@ -54,7 +55,8 @@ export async function* chatCompletion(
         model: modelToUse,
         messages: messages,
         stream: true,
-        temperature: 0.7
+        temperature: options?.temperature ?? 0.7,
+        ...(options?.topP !== undefined && { top_p: options.topP })
       },
       { signal }
     );

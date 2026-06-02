@@ -14,6 +14,7 @@ export default function ChatView({ messages }: Props) {
       case 'question': return 'magenta';
       case 'tool_call': return 'yellow';
       case 'tool_result': return 'green';
+      case 'permission_ask': return 'red';
       default: return 'gray';
     }
   };
@@ -24,7 +25,17 @@ export default function ChatView({ messages }: Props) {
         if (msg.role === 'assistant') {
           return (
             <Box key={i} flexDirection="column">
+              {msg.agentName && (
+                <Text color="magenta" bold>[{msg.agentName}]</Text>
+              )}
               <Text>{renderMarkdown(msg.content)}</Text>
+            </Box>
+          );
+        }
+        if (msg.role === 'permission_ask') {
+          return (
+            <Box key={i}>
+              <Text color="red" bold>? Allow {msg.content}?</Text>
             </Box>
           );
         }
