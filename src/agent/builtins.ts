@@ -49,4 +49,35 @@ If a tool returns a "permission denied" error, briefly acknowledge it and sugges
   color: 'yellow',
 };
 
-export const BUILTIN_AGENTS: AgentConfig[] = [editorAgent, planAgent];
+export const compactionAgent: AgentConfig = {
+  name: 'compaction',
+  description: 'Compacts long conversations into concise summaries',
+  mode: 'primary',
+  hidden: true,
+  prompt: `You are a conversation compaction agent. Your job is to summarize the conversation so far into a concise but comprehensive summary.
+
+Rules:
+- Preserve ALL key decisions made during the conversation
+- Preserve ALL file paths, code changes, and tool results mentioned
+- Preserve the user's intent and any preferences expressed
+- Keep the summary under 2000 tokens
+- Use bullet points for clarity
+- Include any pending tasks or unresolved issues
+- Do NOT add information that was not in the original conversation`,
+  tools: {
+    read_file: false,
+    list_files: false,
+    edit_file: false,
+    mkdir: false,
+    grep: false,
+    bash: false,
+    question: false,
+    task: false,
+  },
+  permission: {
+    edit: 'deny',
+    bash: 'deny',
+  },
+};
+
+export const BUILTIN_AGENTS: AgentConfig[] = [editorAgent, planAgent, compactionAgent];

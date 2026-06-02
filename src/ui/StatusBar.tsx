@@ -6,6 +6,8 @@ interface Props {
   model?: string;
   status?: string;
   agent?: AgentConfig;
+  tokenCount?: number;
+  contextLength?: number;
 }
 
 function mapAgentColor(color?: string): string {
@@ -19,6 +21,11 @@ function mapAgentColor(color?: string): string {
 
 function truncate(text: string, max: number) {
   return text.length > max ? `${text.slice(0, Math.max(0, max - 3))}...` : text;
+}
+
+function formatTokens(count: number): string {
+  if (count >= 1000) return `${Math.round(count / 1000)}K`;
+  return String(count);
 }
 
 const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
@@ -36,12 +43,17 @@ function AnimatedThinking({ text }: { text: string }) {
   return <Text color="yellow" bold>{SPINNER_FRAMES[frame]} {text}</Text>;
 }
 
-export default function StatusBar({ model, status, agent }: Props) {
+export default function StatusBar({ model, status, agent, tokenCount, contextLength }: Props) {
   const columns = process.stdout.columns || 100;
   const width = Math.max(40, columns - 2);
   const isThinking = status === 'AI thinking...';
   const suffix = isThinking ? ' | ' : status ? ` | ${status}` : '';
   const modelText = truncate(model || 'No model', Math.max(10, width - suffix.length - 4));
+
+  const usagePercent = contextLength ? (tokenCount || 0) / contextLength : 0;
+  let tokenColor = 'green';
+  if (usagePercent > 0.75) tokenColor = 'red';
+  else if (usagePercent > 0.5) tokenColor = 'yellow';
 
   return (
     <Box borderStyle="single" paddingX={1} width={width}>
@@ -50,6 +62,12 @@ export default function StatusBar({ model, status, agent }: Props) {
       <Text color={mapAgentColor(agent?.color)}>{agent?.name || 'editor'}</Text>
       <Text color="gray"> | </Text>
       <Text color="cyan">{modelText}</Text>
+      {tokenCount !== undefined && contextLength && contextLength > 0 ? (
+        <>
+          <Text color="gray"> | </Text>
+          <Text color={tokenColor}>{formatTokens(tokenCount)}/{formatTokens(contextLength)}</Text>
+        </>
+      ) : null}
       {isThinking ? (
         <>
           <Text color="gray"> | </Text>

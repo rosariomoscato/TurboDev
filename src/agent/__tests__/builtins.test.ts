@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { editorAgent, planAgent, BUILTIN_AGENTS } from '../builtins.js';
+import { editorAgent, planAgent, compactionAgent, BUILTIN_AGENTS } from '../builtins.js';
 
 describe('builtins', () => {
   describe('editorAgent', () => {
@@ -69,14 +69,55 @@ describe('builtins', () => {
     });
   });
 
-  describe('BUILTIN_AGENTS', () => {
-    it('contains exactly 2 agents', () => {
-      expect(BUILTIN_AGENTS).toHaveLength(2);
+  describe('compactionAgent', () => {
+    it('has name "compaction"', () => {
+      expect(compactionAgent.name).toBe('compaction');
     });
 
-    it('first is editor, second is plan', () => {
+    it('is primary mode', () => {
+      expect(compactionAgent.mode).toBe('primary');
+    });
+
+    it('is hidden', () => {
+      expect(compactionAgent.hidden).toBe(true);
+    });
+
+    it('has all tools disabled', () => {
+      const tools = compactionAgent.tools!;
+      expect(tools.read_file).toBe(false);
+      expect(tools.list_files).toBe(false);
+      expect(tools.edit_file).toBe(false);
+      expect(tools.mkdir).toBe(false);
+      expect(tools.grep).toBe(false);
+      expect(tools.bash).toBe(false);
+      expect(tools.question).toBe(false);
+      expect(tools.task).toBe(false);
+    });
+
+    it('has deny permissions for edit and bash', () => {
+      expect(compactionAgent.permission?.edit).toBe('deny');
+      expect(compactionAgent.permission?.bash).toBe('deny');
+    });
+
+    it('has a prompt', () => {
+      expect(compactionAgent.prompt).toBeDefined();
+      expect(compactionAgent.prompt!.length).toBeGreaterThan(0);
+    });
+
+    it('prompt mentions rules', () => {
+      expect(compactionAgent.prompt).toContain('Rules:');
+    });
+  });
+
+  describe('BUILTIN_AGENTS', () => {
+    it('contains exactly 3 agents', () => {
+      expect(BUILTIN_AGENTS).toHaveLength(3);
+    });
+
+    it('first is editor, second is plan, third is compaction', () => {
       expect(BUILTIN_AGENTS[0].name).toBe('editor');
       expect(BUILTIN_AGENTS[1].name).toBe('plan');
+      expect(BUILTIN_AGENTS[2].name).toBe('compaction');
     });
   });
 });

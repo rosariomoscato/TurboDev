@@ -1,4 +1,6 @@
 import { chatCompletion, ChatMessage, TimeoutError } from '../llm/client.js';
+import { countMessageTokens } from '../llm/tokens.js';
+import { getContextLength } from '../llm/models.js';
 import { executeToolCall } from './tools.js';
 import { ToolCallContext } from './tools.js';
 import { extractToolInvocations, formatToolResult } from './parser.js';
@@ -19,6 +21,8 @@ export interface AgentResult {
   messages: ChatMessage[];
   assistantResponse: string;
   toolCalls: number;
+  tokenCount: number;
+  contextLength: number;
   error?: {
     type: 'timeout' | 'api_error' | 'unknown';
     message: string;
@@ -136,6 +140,8 @@ export async function runAgent(
         messages,
         assistantResponse: fullAssistantResponse,
         toolCalls: totalToolCalls,
+        tokenCount: 0,
+        contextLength: 0,
         error: {
           type: 'timeout',
           message: error.message
@@ -147,6 +153,8 @@ export async function runAgent(
       messages,
       assistantResponse: fullAssistantResponse,
       toolCalls: totalToolCalls,
+      tokenCount: 0,
+      contextLength: 0,
       error: {
         type: error instanceof Error && error.message.includes('API error') ? 'api_error' : 'unknown',
         message: error instanceof Error ? error.message : String(error)
@@ -154,9 +162,15 @@ export async function runAgent(
     };
   }
 
+  const tokenCount = countMessageTokens(messages);
+  const modelId = agent.model || loadConfig().model;
+  const contextLength = getContextLength(modelId || '');
+
   return {
     messages,
     assistantResponse: fullAssistantResponse,
-    toolCalls: totalToolCalls
+    toolCalls: totalToolCalls,
+    tokenCount,
+    contextLength
   };
 }

@@ -15,9 +15,15 @@ import ChatView from './ChatView.js';
 import InputBar from './InputBar.js';
 import StatusBar from './StatusBar.js';
 import { MessageDisplay } from './types.js';
+import { compactConversation } from '../agent/compaction.js';
 import { version } from '../../package.json';
 
 const versionString = `v${version}${__GIT_HASH__ !== 'dev' ? ` (${__GIT_HASH__})` : ''}`;
+
+function formatTokens(count: number): string {
+  if (count >= 1000) return `${Math.round(count / 1000)}K`;
+  return String(count);
+}
 
 export default function App() {
   const { exit } = useApp();
@@ -28,9 +34,9 @@ export default function App() {
   const [showBanner, setShowBanner] = useState(true);
 
   const [allAgents] = useState<AgentConfig[]>(() => loadAllAgents(process.cwd()));
-  const [primaryAgents] = useState<AgentConfig[]>(() => allAgents.filter(a => a.mode !== 'subagent'));
+  const [primaryAgents] = useState<AgentConfig[]>(() => allAgents.filter(a => a.mode !== 'subagent' && !a.hidden));
   const [currentAgentIndex, setCurrentAgentIndex] = useState(0);
-  const [currentAgent, setCurrentAgent] = useState<AgentConfig>(() => allAgents.filter(a => a.mode !== 'subagent')[0]);
+  const [currentAgent, setCurrentAgent] = useState<AgentConfig>(() => allAgents.filter(a => a.mode !== 'subagent' && !a.hidden)[0]);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowBanner(false), 5000);
@@ -40,6 +46,8 @@ export default function App() {
   const [messages, setMessages] = useState<MessageDisplay[]>([]);
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState('');
+  const [tokenCount, setTokenCount] = useState(0);
+  const [contextLength, setContextLength] = useState(0);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [showAgentSelector, setShowAgentSelector] = useState(false);
   const [models, setModels] = useState<{id: string}[]>([]);
@@ -62,6 +70,8 @@ export default function App() {
   currentAgentRef.current = currentAgent;
 
   const primaryAgentsRef = useRef(primaryAgents);
+
+  const compactionNotified = useRef(false);
 
   useEffect(() => {
     registerTaskTool(createTaskTool(process.cwd(), currentAgent, runAgent));
@@ -253,6 +263,44 @@ export default function App() {
       return;
     }
 
+    if (contextLength > 0 && tokenCount > 0) {
+      const usageRatio = tokenCount / contextLength;
+
+      if (usageRatio >= 0.85) {
+        const percent = Math.round(usageRatio * 100);
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `Context window ${percent}% full (${formatTokens(tokenCount)}/${formatTokens(contextLength)}). Compacting conversation...`
+        }]);
+
+        try {
+          const { newMessages } = await compactConversation(
+            conversationHistory,
+            currentAgent.model || config.model
+          );
+          setConversationHistory(newMessages);
+          setTokenCount(0);
+          compactionNotified.current = false;
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: 'Conversation compacted. Continuing.'
+          }]);
+        } catch {
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: 'Compaction failed. Continuing with full context.'
+          }]);
+        }
+      } else if (usageRatio >= 0.75 && !compactionNotified.current) {
+        compactionNotified.current = true;
+        const percent = Math.round(usageRatio * 100);
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `Context window ${percent}% full (${formatTokens(tokenCount)}/${formatTokens(contextLength)}). Auto-compaction will trigger at 85%.`
+        }]);
+      }
+    }
+
     if (input.startsWith('/')) {
       const command = input.slice(1);
 
@@ -342,6 +390,9 @@ export default function App() {
 
         const { result, finalContent } = await runAgentWithAgent(message || 'Hello', mentionedAgent, []);
 
+        setTokenCount(result.tokenCount);
+        setContextLength(result.contextLength);
+
         if (result.error) {
           setMessages(prev => [...prev, {
             role: 'assistant',
@@ -365,6 +416,9 @@ export default function App() {
     setStatus('AI thinking...');
 
     const { result, finalContent } = await runAgentWithAgent(input, currentAgent, conversationHistory);
+
+    setTokenCount(result.tokenCount);
+    setContextLength(result.contextLength);
 
     if (result.error) {
       const errorPrefix = result.error.type === 'timeout'
@@ -495,7 +549,7 @@ export default function App() {
         </Box>
       )}
       <Box marginTop={1}>
-        <StatusBar model={config.model} status={status} agent={currentAgent} />
+        <StatusBar model={config.model} status={status} agent={currentAgent} tokenCount={tokenCount} contextLength={contextLength} />
       </Box>
     </Box>
   );
