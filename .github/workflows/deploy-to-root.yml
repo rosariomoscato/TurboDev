@@ -22,11 +22,15 @@ jobs:
 
       - name: Synchronize files
         run: |
-          # Elimina il contenuto precedente nella cartella turbodev del repo di destinazione
+          # Crea la cartella di destinazione se non esiste
+          mkdir -p target-repo/turbodev
+          # Elimina il contenuto precedente nella cartella turbodev
           rm -rf target-repo/turbodev/*
-          # Copia tutti i file attuali nella cartella turbodev
-          # Escludiamo la cartella .git e il file deploy-to-root.yml stesso se non serve lì
-          cp -r . target-repo/turbodev/
+          # Copia tutti i file (esclusa la cartella .git e la cartella target-repo stessa)
+          # Usiamo rsync o un loop per evitare di copiare la cartella di destinazione dentro se stessa
+          for file in $(ls -A | grep -v '^target-repo$' | grep -v '^\.git$'); do
+            cp -r "$file" target-repo/turbodev/
+          done
           
       - name: Commit and Push changes
         run: |
