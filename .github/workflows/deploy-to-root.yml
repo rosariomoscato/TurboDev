@@ -1,0 +1,38 @@
+name: Deploy to Custom Domain Root
+
+on:
+  push:
+    branches:
+      - master  # Ho impostato master perché il tuo file esistente usa master
+  workflow_dispatch: # Permette di lanciarlo a mano
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout TurboDev (Source)
+        uses: actions/checkout@v3
+
+      - name: Checkout rosmoscato (Target)
+        uses: actions/checkout@v3
+        with:
+          repository: rosariomoscato/rosmoscato
+          token: ${{ secrets.DEPLOY_TOKEN }}
+          path: target-repo
+
+      - name: Synchronize files
+        run: |
+          # Elimina il contenuto precedente nella cartella turbodev del repo di destinazione
+          rm -rf target-repo/turbodev/*
+          # Copia tutti i file attuali nella cartella turbodev
+          # Escludiamo la cartella .git e il file deploy-to-root.yml stesso se non serve lì
+          cp -r . target-repo/turbodev/
+          
+      - name: Commit and Push changes
+        run: |
+          cd target-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add turbodev/
+          git commit -m "Auto-update: sync TurboDev to rosmoscato.xyz/turbodev" || echo "No changes to commit"
+          git push
