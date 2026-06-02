@@ -54,6 +54,7 @@ export default function App() {
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState('');
   const [showModelSelector, setShowModelSelector] = useState(false);
+  const [showAgentSelector, setShowAgentSelector] = useState(false);
   const [models, setModels] = useState<{id: string}[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const modelsPerPage = 9;
@@ -150,11 +151,30 @@ export default function App() {
     }]);
   };
 
+  const handleAgentSelection = (input: string) => {
+    const num = parseInt(input, 10);
+    if (!isNaN(num) && num > 0 && num <= primaryAgents.length) {
+      switchAgent(primaryAgents[num - 1], num - 1);
+    }
+    setShowAgentSelector(false);
+  };
+
+  const isInputMode = showModelSelector || showAgentSelector;
+
   useInput((input, key) => {
-    if (key.tab && !showModelSelector && !pendingQuestion && !pendingPermission) {
+    if (key.tab && !isInputMode && !pendingQuestion && !pendingPermission) {
       const agents = primaryAgentsRef.current;
       const nextIndex = (currentAgentIndex + 1) % agents.length;
       switchAgent(agents[nextIndex], nextIndex);
+      return;
+    }
+
+    if (showAgentSelector) {
+      if (key.escape) {
+        setShowAgentSelector(false);
+        return;
+      }
+      handleAgentSelection(input);
       return;
     }
 
@@ -216,6 +236,11 @@ export default function App() {
 
     if (pendingQuestion) {
       handleQuestionAnswer(input);
+      return;
+    }
+
+    if (showAgentSelector) {
+      handleAgentSelection(input);
       return;
     }
 
@@ -282,21 +307,8 @@ export default function App() {
       }
 
       if (command === 'agent') {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: 'Available agents:\n' + primaryAgents.map((a, i) =>
-            `${i + 1}. ${a.name} — ${a.description}${a.name === currentAgent.name ? ' (current)' : ''}`
-          ).join('\n') + '\n\nType /<number> to switch (e.g. /2)'
-        }]);
+        setShowAgentSelector(true);
         return;
-      }
-
-      const agentNum = parseInt(command, 10);
-      if (!isNaN(agentNum)) {
-        if (agentNum > 0 && agentNum <= primaryAgents.length) {
-          switchAgent(primaryAgents[agentNum - 1], agentNum - 1);
-          return;
-        }
       }
 
       if (command === 'setup') {
@@ -425,6 +437,19 @@ export default function App() {
     <Box flexDirection="column">
       <Box flexDirection="column">
         <ChatView messages={messages} />
+        {showAgentSelector && (
+          <Box flexDirection="column" alignItems="flex-start" marginY={1}>
+            <Text color="cyan" bold>Select Agent</Text>
+            {primaryAgents.map((a, i) => (
+              <Box key={a.name}>
+                <Text color={a.name === currentAgent.name ? 'green' : 'gray'}>
+                  {i + 1}. {a.name}{a.name === currentAgent.name ? ' (current)' : ''} — {a.description}
+                </Text>
+              </Box>
+            ))}
+            <Text color="gray">1-{primaryAgents.length} select · Esc cancel</Text>
+          </Box>
+        )}
         {showModelSelector && (
           <Box flexDirection="column" alignItems="flex-start" marginY={1}>
             <Text color="cyan" bold>Select AI Model</Text>
@@ -443,7 +468,7 @@ export default function App() {
           </Box>
         )}
       </Box>
-      {!showModelSelector && (
+      {!isInputMode && (
         <Box flexDirection="column">
           {pendingPermission && (
             <>

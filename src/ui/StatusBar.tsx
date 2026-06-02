@@ -21,32 +21,19 @@ function truncate(text: string, max: number) {
   return text.length > max ? `${text.slice(0, Math.max(0, max - 3))}...` : text;
 }
 
+const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+
 function AnimatedThinking({ text }: { text: string }) {
   const [frame, setFrame] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setFrame((prev) => (prev + 1) % (text.length + 2));
-    }, 100);
+      setFrame((prev) => (prev + 1) % SPINNER_FRAMES.length);
+    }, 150);
     return () => clearInterval(timer);
-  }, [text.length]);
+  }, []);
 
-  const cursor = frame % (text.length + 2);
-
-  return (
-    <Box>
-      {text.split('').map((char, i) => {
-        const dist = Math.abs(i - cursor);
-        if (dist === 0) {
-          return <Text key={i} color="white" bold>{char}</Text>;
-        }
-        if (dist === 1) {
-          return <Text key={i} color="yellow" bold>{char}</Text>;
-        }
-        return <Text key={i} color="yellow" dimColor>{char}</Text>;
-      })}
-    </Box>
-  );
+  return <Text color="yellow" bold>{SPINNER_FRAMES[frame]} {text}</Text>;
 }
 
 export default function StatusBar({ model, status, agent }: Props) {
