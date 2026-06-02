@@ -29,19 +29,17 @@ git clone https://github.com/rosariomoscato/TurboDev.git
 cd TurboDev
 npm install
 npm run build
+npm link
 ```
 
 ## Usage
 
 ```bash
-# Start
-npm start
-
-# Or with dev mode (hot reload)
-npm run dev
+# Launch TurboDev from anywhere
+turbodev
 
 # Guided setup
-npx turbodev --setup
+turbodev --setup
 ```
 
 ### Chat commands
