@@ -1,28 +1,28 @@
 # TurboDev
 
-**Terminal-based AI coding agent** — il tuo coding partner nel terminale.
+**Terminal-based AI coding agent** — your coding partner in the terminal.
 
 <p align="center">
   <img src="assets/TurboDev2.png" alt="TurboDev Screenshot" width="700" />
 </p>
 
-## Cos'è
+## What is it
 
-TurboDev è un agente AI per il coding che funziona interamente nel terminale. Permette di chattare con modelli LLM (via OpenRouter), eseguire tool, gestire file e codice — tutto senza uscire dalla CLI.
+TurboDev is an AI coding agent that runs entirely in the terminal. It lets you chat with LLM models (via OpenRouter), execute tools, manage files and code — all without leaving the CLI.
 
-## Funzionalità
+## Features
 
-- **Chat AI nel terminale** — conversa con modelli LLM in tempo reale con streaming
-- **Selezione modello** — scegli tra decine di modelli popolari (DeepSeek, GPT-4, Claude, Gemini, Llama, GLM...)
-- **7 tool integrati** — l'AI può leggere, cercare, modificare file, eseguire comandi shell e farti domande
-- **Supporto AGENTS.md** — contesto e istruzioni di progetto caricate automaticamente dallo standard aperto
-- **Wizard /init** — genera un file AGENTS.md interattivo con auto-detection del tipo di progetto
-- **Rendering Markdown** — risposte formattate con titoli, list, codice e grassetto nel terminale
-- **Setup guidato** — configurazione interattiva di API key e modello al primo avvio
-- **Gestione errori** — timeout LLM, errori API e domande interattive all'utente
-- **Interfaccia React/Ink** — UI moderna e reattiva direttamente nel terminale
+- **AI Chat in the terminal** — converse with LLM models in real time with streaming
+- **Model selection** — choose from dozens of popular models (DeepSeek, GPT-4, Claude, Gemini, Llama, GLM...)
+- **7 built-in tools** — the AI can read, search, and edit files, run shell commands, and ask you questions
+- **AGENTS.md support** — project context and instructions loaded automatically from the open standard
+- **/init wizard** — generate an AGENTS.md file interactively with auto-detection of project type
+- **Markdown rendering** — formatted responses with headings, lists, code blocks, and bold text in the terminal
+- **Guided setup** — interactive configuration of API key and model on first launch
+- **Error handling** — LLM timeout, API errors, and interactive user questions
+- **React/Ink interface** — modern and responsive UI right in the terminal
 
-## Installazione
+## Installation
 
 ```bash
 git clone https://github.com/rosariomoscato/TurboDev.git
@@ -31,66 +31,68 @@ npm install
 npm run build
 ```
 
-## Utilizzo
+## Usage
 
 ```bash
-# Avvio
+# Start
 npm start
 
-# Oppure con dev mode (hot reload)
+# Or with dev mode (hot reload)
 npm run dev
 
-# Setup guidato
+# Guided setup
 npx turbodev --setup
 ```
 
-### Comandi in chat
+### Chat commands
 
-| Comando | Descrizione |
+| Command | Description |
 |---------|-------------|
-| `/help` | Mostra i comandi disponibili |
-| `/init` | Genera AGENTS.md con wizard interattivo |
-| `/model` | Seleziona il modello AI |
-| `/setup` | Rilancia il setup wizard |
-| `/clear` | Pulisce la chat |
-| `/exit` | Esci da TurboDev |
+| `/help` | Show available commands |
+| `/init` | Generate AGENTS.md with interactive wizard |
+| `/model` | Select AI model |
+| `/setup` | Re-run setup wizard |
+| `/clear` | Clear chat history |
+| `/exit` | Exit TurboDev |
 
-### Tool disponibili
+### Available tools
 
-| Tool | Descrizione |
+| Tool | Description |
 |------|-------------|
-| `read_file` | Legge il contenuto di un file |
-| `list_files` | Elenca i file in una directory |
-| `edit_file` | Crea o modifica un file |
-| `mkdir` | Crea directory |
-| `grep` | Cerca nei file con regex (usa ripgrep se disponibile) |
-| `bash` | Esegue comandi shell con timeout |
-| `question` | Chiede chiarimenti all'utente |
+| `read_file` | Read the contents of a file |
+| `list_files` | List files in a directory |
+| `edit_file` | Create or edit a file |
+| `mkdir` | Create directories |
+| `grep` | Search file contents with regex (uses ripgrep if available) |
+| `bash` | Execute shell commands with timeout |
+| `question` | Ask the user for clarification |
 
-## Configurazione
+## Configuration
 
-TurboDev richiede una **API key OpenRouter** per funzionare. Il setup wizard ti guiderà nella configurazione al primo avvio, oppure puoi lanciarlo con `/setup`.
+TurboDev requires an **OpenRouter API key** to work. The setup wizard will guide you through configuration on first launch, or you can launch it with `/setup`.
 
-La configurazione viene salvata in `~/.turbodevrc`.
+Configuration is saved in `~/.turbodevrc`.
 
 ## AGENTS.md
 
-TurboDev supporta lo standard aperto [AGENTS.md](https://agents.md/) — un file markdown che fornisce contesto e istruzioni al AI agent. Se presente nella directory di lavoro, viene caricato automaticamente all'avvio e passato come contesto di progetto.
+TurboDev supports the open [AGENTS.md](https://agents.md/) standard — a markdown file that provides context and instructions to the AI agent. If present in the working directory, it is automatically loaded at startup and passed as project context.
 
-Il comando `/init` genera il file tramite un wizard interattivo che:
-- Auto-detecta il tipo di progetto (Node.js, Python, Rust, Go)
-- Permette di selezionare le sezioni da includere (Setup Commands, Code Style, Testing, ecc.)
-- Se il file esiste già, chiede se sovrascrivere o aggiungere nuove sezioni
+The `/init` command generates the file through an interactive wizard that:
+- Auto-detects the project type (Node.js, Python, Rust, Go)
+- Lets you select which sections to include (Setup Commands, Code Style, Testing, etc.)
+- If the file already exists, asks whether to overwrite or append new sections
 
-- **TypeScript** — linguaggio principale
-- **React + Ink** — UI terminale declarativa
-- **OpenRouter** — provider LLM multi-modello
+## Tech Stack
+
+- **TypeScript** — primary language
+- **React + Ink** — declarative terminal UI
+- **OpenRouter** — multi-model LLM provider
 - **tsup** — build system
 
-## Autore
+## Author
 
 **Rosario Moscato**
 
-## Licenza
+## License
 
 MIT
