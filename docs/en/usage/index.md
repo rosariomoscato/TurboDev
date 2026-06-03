@@ -55,15 +55,17 @@ Custom agents can define their own color.
 
 ## Thinking Indicator
 
-When the AI is processing, a braille spinner animates in the status bar:
+When the AI is processing, a braille spinner animates in the status bar and the response appears in real-time in the chat area — you'll see the text being typed word by word as it's generated:
 
 ```
 ⠋ AI thinking...
 ```
 
+If the AI calls a tool (e.g., `read_file`), the streaming text briefly clears and resumes once the tool result is processed. This gives you immediate feedback that the agent is actively working.
+
 ## Permission Prompts
 
-When an agent needs approval (e.g., plan agent editing a file), you'll see:
+When an agent needs approval (e.g., plan agent editing a file), the prompt appears even while the AI is thinking. You can respond immediately:
 
 ```
 ? Allow edit_file?

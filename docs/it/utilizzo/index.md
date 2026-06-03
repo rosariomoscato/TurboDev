@@ -55,15 +55,17 @@ Gli agenti personalizzati possono definire il proprio colore.
 
 ## Indicatore di elaborazione
 
-Quando l'AI sta elaborando, uno spinner braille si anima nella barra di stato:
+Quando l'AI sta elaborando, uno spinner braille si anima nella barra di stato e la risposta appare in tempo reale nell'area chat — vedrai il testo comparire parola per parola mentre viene generato:
 
 ```
 ⠋ AI sta pensando...
 ```
 
+Se l'AI chiama uno strumento (es. `read_file`), il testo streaming si azzera temporaneamente e riprende una volta elaborato il risultato. Questo ti dà un feedback immediato che l'agente sta lavorando attivamente.
+
 ## Richieste di permesso
 
-Quando un agente ha bisogno di approvazione (es. l'agente plan sta modificando un file), vedrai:
+Quando un agente ha bisogno di approvazione (es. l'agente plan sta modificando un file), il prompt appare anche mentre l'AI sta elaborando. Puoi rispondere immediatamente:
 
 ```
 ? Consentire edit_file?
