@@ -109,6 +109,18 @@ The `/init` command generates the file through an interactive wizard that:
 - Lets you select which sections to include (Setup Commands, Code Style, Testing, Design, etc.)
 - If the file already exists, asks whether to overwrite or append new sections
 
+## Roadmap
+
+Starting June 2026, we ship a new feature every week:
+
+| Week | Feature | Description |
+|------|---------|-------------|
+| Jun 4 | **Skills** | Installable skill packs that extend agent capabilities |
+| Jun 11 | **MCP** | Model Context Protocol support for external tool integration |
+| Jun 18 | **Persistent Memory** | Cross-session memory so the AI remembers your project context |
+| Jun 25 | **Economy Mode** | Budget-aware mode that optimizes token usage and model selection |
+| Jul 2 | **Ollama Connection** | Run local models via Ollama alongside OpenRouter |
+
 ## Tech Stack
 
 - **TypeScript** — primary language
