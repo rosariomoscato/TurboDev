@@ -60,6 +60,7 @@ export default function App() {
   const [messages, setMessages] = useState<MessageDisplay[]>([]);
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState('');
+  const [streamingMessage, setStreamingMessage] = useState('');
   const [tokenCount, setTokenCount] = useState(0);
   const [contextLength, setContextLength] = useState(0);
   const [sessionCost, setSessionCost] = useState(0);
@@ -238,8 +239,11 @@ export default function App() {
         const sysPrompt = generateSystemPrompt(agentsContext ?? undefined, currentAgent);
         setTokenCount(estimateTokens(sysPrompt));
         setContextLength(getContextLength(currentAgent.model || config.model));
+      } else {
+        return;
       }
       setShowSessionPrompt(false);
+      setShowBanner(false);
       setPendingSession(null);
       return;
     }
@@ -341,8 +345,10 @@ export default function App() {
       (chunk) => {
         if (chunk.type === 'content') {
           finalContent += chunk.text;
+          setStreamingMessage(finalContent);
         } else if (chunk.type === 'tool_call') {
           finalContent = '';
+          setStreamingMessage('');
         }
       },
       { onQuestion: handleQuestion, onPermissionAsk: handlePermissionAsk },
@@ -350,6 +356,7 @@ export default function App() {
     );
 
     abortControllerRef.current = null;
+    setStreamingMessage('');
 
     return { result, finalContent };
   };
@@ -719,6 +726,12 @@ export default function App() {
           </Box>
         )}
         <ChatView messages={messages} />
+        {streamingMessage && (
+          <Box flexDirection="column" marginTop={1}>
+            <Text color="gray">{currentAgent.name}: </Text>
+            <Text>{streamingMessage}</Text>
+          </Box>
+        )}
         {showAgentSelector && (
           <Box flexDirection="column" alignItems="flex-start" marginY={1}>
             <Text color="cyan" bold>Select Agent</Text>
@@ -764,7 +777,7 @@ export default function App() {
           </Box>
         )}
       </Box>
-      {!isInputMode && !showSessionPrompt && !status && (
+      {!isInputMode && !showSessionPrompt && (!status || pendingPermission || pendingQuestion) && (
         <Box flexDirection="column">
           {pendingPermission && (
             <>
