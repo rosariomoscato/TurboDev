@@ -26,6 +26,21 @@ import { version } from '../../package.json';
 
 const versionString = `v${version}${__GIT_HASH__ !== 'dev' ? ` (${__GIT_HASH__})` : ''}`;
 
+function mapAgentColor(color?: string): string {
+  const colorMap: Record<string, string> = {
+    cyan: 'cyan', yellow: 'yellow', green: 'green',
+    red: 'red', magenta: 'magenta', blue: 'blue', gray: 'gray',
+  };
+  if (!color) return 'cyan';
+  return colorMap[color] || 'cyan';
+}
+
+function shortModelName(modelId: string): string {
+  const parts = modelId.split('/');
+  const name = parts.length > 1 ? parts.slice(1).join('/') : modelId;
+  return name.length > 35 ? name.slice(0, 32) + '...' : name;
+}
+
 function formatTokens(count: number): string {
   if (count >= 1000) return `${Math.round(count / 1000)}K`;
   return String(count);
@@ -731,16 +746,28 @@ export default function App() {
       <Box flexDirection="column">
         {showBanner && (
           <Box flexDirection="column" marginBottom={1}>
-            <Text color="cyan">
-{'████████╗██╗   ██╗██████╗ ██████╗  ██████╗ ██████╗ ███████╗██╗   ██╗\n╚══██╔══╝██║   ██║██╔══██╗██╔══██╗██╔═══██╗██╔══██╗██╔════╝██║   ██║\n   ██║   ██║   ██║██████╔╝██████╔╝██║   ██║██║  ██║█████╗  ██║   ██║\n   ██║   ██║   ██║██╔══██╗██╔══██╗██║   ██║██║  ██║██╔══╝  ╚██╗ ██╔╝\n   ██║   ╚██████╔╝██║  ██║██████╔╝╚██████╔╝██████╔╝███████╗ ╚████╔╝\n   ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝  ╚═══╝'}
-            </Text>
-            <Text color="gray">by Rosario Moscato · {versionString}</Text>
-            <Text color={agentsContext ? 'green' : 'yellow'}>
-              {agentsContext
-                ? `AGENTS.md loaded`
-                : `No AGENTS.md found — use /init to create one`}
-            </Text>
-            <Text color="gray">Agent: {currentAgent.name}</Text>
+            <Text color="brightCyan">{'█████ █   █ ████  ████   ███   ████  █████ █   █'}</Text>
+            <Text color="cyan">{'  █   █   █ █   █ █   █ █   █  █   █ █    █   █'}</Text>
+            <Text color="cyan">{'  █   █   █ ████  ████  █   █  █   █ ████   █ █ '}</Text>
+            <Text color="cyan">{'  █   █   █ █  █  █   █ █   █  █   █ █      █ █ '}</Text>
+            <Text color="cyan">{'  █    ███  █   █ ████   ███    ███  █████   █  '}</Text>
+            <Box flexDirection="column">
+              <Text color="gray">{'─'.repeat(48)}</Text>
+              <Box>
+                <Text color="gray">{' Model  '}</Text>
+                <Text color="white">{shortModelName(config.model || 'No model')}</Text>
+                <Text color="gray">{'  │  Agent  '}</Text>
+                <Text color={mapAgentColor(currentAgent.color)}>{currentAgent.name}</Text>
+                <Text color="gray">{'  │  '}</Text>
+                <Text color="gray">{versionString}</Text>
+              </Box>
+              <Box>
+                <Text color="gray">{' '}</Text>
+                <Text color={agentsContext ? 'green' : 'yellow'}>{agentsContext ? '● AGENTS.md' : '○ No AGENTS.md'}</Text>
+                <Text color="gray">{'  │  '}</Text>
+                <Text color="cyan">rosmoscato.xyz/turbodev</Text>
+              </Box>
+            </Box>
           </Box>
         )}
         {showSessionPrompt && pendingSession && (
