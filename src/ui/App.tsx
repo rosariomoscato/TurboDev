@@ -12,6 +12,7 @@ import type { AgentConfig } from '../agent/types.js';
 import SetupWizard from './SetupWizard.js';
 import InitWizard from './InitWizard.js';
 import ChatView from './ChatView.js';
+import { renderMarkdown } from './markdown.js';
 import InputBar from './InputBar.js';
 import StatusBar from './StatusBar.js';
 import { MessageDisplay } from './types.js';
@@ -757,7 +758,7 @@ export default function App() {
                   {msg.agentName && (
                     <Text color="magenta" bold>[{msg.agentName}]</Text>
                   )}
-                  <Text>{msg.content}</Text>
+                  <Text>{renderMarkdown(msg.content)}</Text>
                 </Box>
               );
             }
@@ -777,7 +778,7 @@ export default function App() {
         {streamingMessage && (
           <Box flexDirection="column">
             <Text color="gray">{currentAgent.name}: </Text>
-            <Text>{streamingMessage.split('\n').slice(-6).join('\n')}</Text>
+            <Text>{renderMarkdown(streamingMessage.split('\n').slice(-6).join('\n'))}</Text>
           </Box>
         )}
         {showAgentSelector && (

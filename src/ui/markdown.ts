@@ -5,6 +5,8 @@ export function renderMarkdown(text: string): string {
   const result: string[] = [];
   let inCodeBlock = false;
   let codeBlockLines: string[] = [];
+  let inTable = false;
+  let tableLines: string[] = [];
 
   for (const line of lines) {
     if (line.startsWith('```')) {
@@ -21,6 +23,19 @@ export function renderMarkdown(text: string): string {
     if (inCodeBlock) {
       codeBlockLines.push(line);
       continue;
+    }
+
+    if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+      if (!inTable) {
+        inTable = true;
+        tableLines = [];
+      }
+      tableLines.push(line);
+      continue;
+    } else if (inTable) {
+      result.push(renderTable(tableLines));
+      inTable = false;
+      tableLines = [];
     }
 
     if (line.startsWith('### ')) {
@@ -52,7 +67,36 @@ export function renderMarkdown(text: string): string {
     result.push(renderInline(line));
   }
 
+  if (inTable) {
+    result.push(renderTable(tableLines));
+  }
+
   return result.join('\n');
+}
+
+function renderTable(lines: string[]): string {
+  const rows = lines
+    .filter(line => !line.trim().match(/^\|[\s\-:|]+\|$/))
+    .map(line =>
+      line.trim().split('|').slice(1, -1).map(cell => cell.trim())
+    );
+
+  if (rows.length === 0) return '';
+
+  const colWidths = rows[0].map((_, colIndex) =>
+    Math.max(...rows.map(row => (row[colIndex] || '').length))
+  );
+
+  const renderRow = (row: string[], isHeader: boolean) =>
+    row.map((cell, i) => {
+      const rendered = renderInline(cell);
+      const padded = rendered.padEnd(colWidths[i] + (rendered.length - cell.length));
+      return isHeader || i === 0 ? chalk.bold(padded) : padded;
+    }).join(' │ ');
+
+  const separator = colWidths.map(w => '─'.repeat(w)).join('─┼─');
+
+  return [renderRow(rows[0], true), chalk.gray(separator), ...rows.slice(1).map(r => renderRow(r, false))].join('\n');
 }
 
 function renderInline(text: string): string {
