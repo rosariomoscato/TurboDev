@@ -61,6 +61,7 @@ export default function App() {
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState('');
   const [streamingMessage, setStreamingMessage] = useState('');
+  const [thinkingStart, setThinkingStart] = useState<number>(0);
   const [tokenCount, setTokenCount] = useState(0);
   const [contextLength, setContextLength] = useState(0);
   const [sessionCost, setSessionCost] = useState(0);
@@ -252,6 +253,7 @@ export default function App() {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
       setStatus('');
+      setThinkingStart(0);
       return;
     }
 
@@ -612,6 +614,7 @@ export default function App() {
           content: `@${agentName}: ${message}`
         }]);
         setStatus(`@${agentName} thinking...`);
+        setThinkingStart(Date.now());
 
         const { result, finalContent } = await runAgentWithAgent(message || 'Hello', mentionedAgent, []);
 
@@ -634,12 +637,14 @@ export default function App() {
         }
 
         setStatus('');
+        setThinkingStart(0);
         return;
       }
     }
 
     setMessages(prev => [...prev, { role: 'user', content: input }]);
     setStatus('AI thinking...');
+    setThinkingStart(Date.now());
 
     const { result, finalContent } = await runAgentWithAgent(input, currentAgent, conversationHistory);
 
@@ -663,6 +668,7 @@ export default function App() {
     }
 
     setStatus('');
+    setThinkingStart(0);
   };
 
   const activeOnSubmit = pendingPermission
@@ -800,7 +806,7 @@ export default function App() {
         </Box>
       )}
       <Box marginTop={1}>
-        <StatusBar model={config.model} status={status} agent={currentAgent} tokenCount={tokenCount} contextLength={contextLength} sessionCost={sessionCost} />
+        <StatusBar model={config.model} status={status} agent={currentAgent} tokenCount={tokenCount} contextLength={contextLength} sessionCost={sessionCost} thinkingStart={thinkingStart} />
       </Box>
     </Box>
   );

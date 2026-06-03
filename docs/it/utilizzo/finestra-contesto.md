@@ -10,6 +10,10 @@ La barra di stato mostra un indicatore dei token come `1.24K/128K`:
 
 - **Valore a sinistra** — Token stimati utilizzati (inclusi prompt di sistema, cronologia e risultati degli strumenti)
 - **Valore a destra** — Lunghezza massima del contesto per il modello corrente
+- **Barra di progresso** — Indicatore visivo `████░░░░░░` per capire a colpo d'occhio
+- **Percentuale** — Percentuale numerica (es. `12%`)
+
+Esempio: `████░░░░░░ 1.24K/128K 12%`
 
 ### Codifica colore
 

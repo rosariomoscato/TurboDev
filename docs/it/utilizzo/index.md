@@ -22,15 +22,19 @@ La barra di stato in basso mostra:
 
 | Elemento | Descrizione |
 |----------|-------------|
-| ID modello | Modello LLM corrente |
 | Nome agente | Agente corrente con il suo colore |
-| Utilizzo token | `X.XXK/YK` — token usati / dimensione finestra di contesto |
+| Modello | Modello LLM corrente (nome abbreviato) |
+| Utilizzo token | Mini barra di progresso `████░░░░░░` + `X.XXK/YK` + percentuale |
 | Costo | Costo cumulativo della sessione (es. `$0.0023`) |
-| Spinner | Animazione braille mentre l'AI sta elaborando |
+| Spinner | Animazione braille con tempo trascorso (es. `⠋ AI thinking... 8s`) |
 
 ### Indicatore utilizzo token
 
-L'utilizzo dei token è codificato per colore:
+L'utilizzo dei token include una barra di progresso visiva ed è codificato per colore:
+
+```
+████░░░░░░ 1.24K/128K 12%
+```
 
 | Colore | Significato |
 |--------|-------------|

@@ -9,6 +9,7 @@ interface Props {
   tokenCount?: number;
   contextLength?: number;
   sessionCost?: number;
+  thinkingStart?: number;
 }
 
 function mapAgentColor(color?: string): string {
@@ -31,19 +32,41 @@ function formatTokens(count: number): string {
   return `${k.toFixed(2)}K`;
 }
 
+function shortModel(modelId: string): string {
+  const parts = modelId.split('/');
+  const name = parts.length > 1 ? parts.slice(1).join('/') : modelId;
+  return name.length > 28 ? name.slice(0, 25) + '...' : name;
+}
+
+function miniBar(percent: number): string {
+  const filled = Math.round(percent * 10);
+  return '█'.repeat(filled) + '░'.repeat(10 - filled);
+}
+
 const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
-function AnimatedThinking({ text }: { text: string }) {
+function AnimatedThinking({ text, startTime }: { text: string; startTime?: number }) {
   const [frame, setFrame] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => {
+    const spinTimer = setInterval(() => {
       setFrame((prev) => (prev + 1) % SPINNER_FRAMES.length);
     }, 150);
-    return () => clearInterval(timer);
+    return () => clearInterval(spinTimer);
   }, []);
 
-  return <Text color="yellow" bold>{SPINNER_FRAMES[frame]} {text}</Text>;
+  useEffect(() => {
+    if (!startTime) return;
+    setElapsed(0);
+    const secTimer = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+    return () => clearInterval(secTimer);
+  }, [startTime]);
+
+  const timerText = startTime && elapsed > 0 ? ` ${elapsed}s` : '';
+  return <Text color="yellow" bold>{SPINNER_FRAMES[frame]} {text}{timerText}</Text>;
 }
 
 function formatCost(cost: number): string {
@@ -53,17 +76,18 @@ function formatCost(cost: number): string {
   return `$${cost.toFixed(2)}`;
 }
 
-export default function StatusBar({ model, status, agent, tokenCount, contextLength, sessionCost }: Props) {
+export default function StatusBar({ model, status, agent, tokenCount, contextLength, sessionCost, thinkingStart }: Props) {
   const columns = process.stdout.columns || 100;
   const width = Math.max(40, columns - 2);
-  const isThinking = status === 'AI thinking...';
-  const suffix = isThinking ? ' | ' : status ? ` | ${status}` : '';
-  const modelText = truncate(model || 'No model', Math.max(10, width - suffix.length - 4));
+  const isThinking = status === 'AI thinking...' || (status?.includes('thinking...') ?? false);
+  const modelText = shortModel(model || 'No model');
 
   const usagePercent = contextLength ? (tokenCount || 0) / contextLength : 0;
   let tokenColor = 'green';
   if (usagePercent > 0.75) tokenColor = 'red';
   else if (usagePercent > 0.5) tokenColor = 'yellow';
+
+  const percent = Math.round(usagePercent * 100);
 
   return (
     <Box borderStyle="single" paddingX={1} width={width}>
@@ -75,7 +99,13 @@ export default function StatusBar({ model, status, agent, tokenCount, contextLen
       {tokenCount !== undefined && contextLength && contextLength > 0 ? (
         <>
           <Text color="gray"> | </Text>
-          <Text color={tokenColor}>{formatTokens(tokenCount)}/{formatTokens(contextLength)}</Text>
+          <Text color={tokenColor}>{miniBar(usagePercent)} {formatTokens(tokenCount)}/{formatTokens(contextLength)}</Text>
+        </>
+      ) : null}
+      {percent > 0 ? (
+        <>
+          <Text color="gray"> </Text>
+          <Text color={tokenColor}>{percent}%</Text>
         </>
       ) : null}
       {sessionCost !== undefined && sessionCost > 0 ? (
@@ -87,7 +117,7 @@ export default function StatusBar({ model, status, agent, tokenCount, contextLen
       {isThinking ? (
         <>
           <Text color="gray"> | </Text>
-          <AnimatedThinking text={status} />
+          <AnimatedThinking text={status || ''} startTime={thinkingStart} />
         </>
       ) : status ? (
         <>

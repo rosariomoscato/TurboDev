@@ -22,15 +22,19 @@ The status bar at the bottom shows:
 
 | Element | Description |
 |---------|-------------|
-| Model ID | Current LLM model |
 | Agent name | Current agent with its color |
-| Token usage | `X.XXK/YK` — tokens used / context window size |
+| Model | Current LLM model (short name) |
+| Token usage | Mini progress bar `████░░░░░░` + `X.XXK/YK` + percentage |
 | Cost | Cumulative session cost (e.g. `$0.0023`) |
-| Spinner | Braille animation while the AI is thinking |
+| Spinner | Braille animation with elapsed time (e.g. `⠋ AI thinking... 8s`) |
 
 ### Token Usage Indicator
 
-Token usage is color-coded:
+Token usage includes a visual progress bar and is color-coded:
+
+```
+████░░░░░░ 1.24K/128K 12%
+```
 
 | Color | Meaning |
 |-------|---------|

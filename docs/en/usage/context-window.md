@@ -10,6 +10,10 @@ The status bar shows a token indicator like `1.24K/128K`:
 
 - **Left value** — Estimated tokens used (including system prompt, conversation history, and tool results)
 - **Right value** — Maximum context length for the current model
+- **Progress bar** — Visual `████░░░░░░` indicator showing usage at a glance
+- **Percentage** — Numeric percentage (e.g. `12%`)
+
+Example: `████░░░░░░ 1.24K/128K 12%`
 
 ### Color Coding
 
