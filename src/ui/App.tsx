@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, useApp, useInput, Text } from 'ink';
+import { Box, useApp, useInput, Text, Static } from 'ink';
 import { loadConfig, saveConfig } from '../config/store.js';
 import { runAgent } from '../agent/loop.js';
 import { ChatMessage } from '../llm/client.js';
@@ -97,6 +97,8 @@ export default function App() {
 
   const compactionNotified = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const streamingBufferRef = useRef('');
+  const streamingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (showSessionPrompt) return;
@@ -124,7 +126,7 @@ export default function App() {
     if (sessionId && messages.length > 0) {
       autoSave(messages, tokenCount, contextLength);
     }
-  }, [messages, tokenCount, contextLength]);
+  }, [messages.length, tokenCount, contextLength]);
 
   useEffect(() => {
     registerTaskTool(createTaskTool(process.cwd(), currentAgent, runAgent));
@@ -347,9 +349,20 @@ export default function App() {
       (chunk) => {
         if (chunk.type === 'content') {
           finalContent += chunk.text;
-          setStreamingMessage(finalContent);
+          streamingBufferRef.current = finalContent;
+          if (!streamingTimerRef.current) {
+            streamingTimerRef.current = setTimeout(() => {
+              setStreamingMessage(streamingBufferRef.current);
+              streamingTimerRef.current = null;
+            }, 600);
+          }
         } else if (chunk.type === 'tool_call') {
           finalContent = '';
+          streamingBufferRef.current = '';
+          if (streamingTimerRef.current) {
+            clearTimeout(streamingTimerRef.current);
+            streamingTimerRef.current = null;
+          }
           setStreamingMessage('');
         }
       },
@@ -358,6 +371,11 @@ export default function App() {
     );
 
     abortControllerRef.current = null;
+    if (streamingTimerRef.current) {
+      clearTimeout(streamingTimerRef.current);
+      streamingTimerRef.current = null;
+    }
+    streamingBufferRef.current = '';
     setStreamingMessage('');
 
     return { result, finalContent };
@@ -731,11 +749,35 @@ export default function App() {
             <Text color="gray">  [y/n]</Text>
           </Box>
         )}
-        <ChatView messages={messages} />
+        <Static items={messages}>
+          {(msg, index) => {
+            if (msg.role === 'assistant') {
+              return (
+                <Box key={index} flexDirection="column">
+                  {msg.agentName && (
+                    <Text color="magenta" bold>[{msg.agentName}]</Text>
+                  )}
+                  <Text>{msg.content}</Text>
+                </Box>
+              );
+            }
+            return (
+              <Box key={index}>
+                <Text color={
+                  msg.role === 'user' ? 'cyan' :
+                  msg.role === 'question' ? 'magenta' :
+                  msg.role === 'tool_call' ? 'yellow' :
+                  msg.role === 'tool_result' ? 'green' :
+                  msg.role === 'permission_ask' ? 'red' : 'gray'
+                }>{msg.content}</Text>
+              </Box>
+            );
+          }}
+        </Static>
         {streamingMessage && (
-          <Box flexDirection="column" marginTop={1}>
+          <Box flexDirection="column">
             <Text color="gray">{currentAgent.name}: </Text>
-            <Text>{streamingMessage}</Text>
+            <Text>{streamingMessage.split('\n').slice(-6).join('\n')}</Text>
           </Box>
         )}
         {showAgentSelector && (

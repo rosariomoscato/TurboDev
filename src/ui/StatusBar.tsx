@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { Box, Text } from 'ink';
 import { AgentConfig } from '../agent/types.js';
 
@@ -52,7 +52,7 @@ function AnimatedThinking({ text, startTime }: { text: string; startTime?: numbe
   useEffect(() => {
     const spinTimer = setInterval(() => {
       setFrame((prev) => (prev + 1) % SPINNER_FRAMES.length);
-    }, 150);
+    }, 800);
     return () => clearInterval(spinTimer);
   }, []);
 
@@ -76,7 +76,7 @@ function formatCost(cost: number): string {
   return `$${cost.toFixed(2)}`;
 }
 
-export default function StatusBar({ model, status, agent, tokenCount, contextLength, sessionCost, thinkingStart }: Props) {
+const StatusBar = memo(function StatusBar({ model, status, agent, tokenCount, contextLength, sessionCost, thinkingStart }: Props) {
   const columns = process.stdout.columns || 100;
   const width = Math.max(40, columns - 2);
   const isThinking = status === 'AI thinking...' || (status?.includes('thinking...') ?? false);
@@ -89,8 +89,8 @@ export default function StatusBar({ model, status, agent, tokenCount, contextLen
 
   const percent = Math.round(usagePercent * 100);
 
-  return (
-    <Box borderStyle="single" paddingX={1} width={width}>
+  const content = (
+    <>
       <Text color="gray">TurboDev</Text>
       <Text color="gray"> | </Text>
       <Text color={mapAgentColor(agent?.color)}>{agent?.name || 'editor'}</Text>
@@ -125,6 +125,17 @@ export default function StatusBar({ model, status, agent, tokenCount, contextLen
           <Text color="yellow">{status}</Text>
         </>
       ) : null}
+    </>
+  );
+
+  return (
+    <Box flexDirection="column">
+      <Text color="gray">{'─'.repeat(width)}</Text>
+      <Box paddingX={1}>
+        {content}
+      </Box>
     </Box>
   );
-}
+});
+
+export default StatusBar;
