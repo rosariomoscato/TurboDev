@@ -1,6 +1,6 @@
 {
   "name": "@rosariomoscato/turbodev",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "description": "Terminal-based AI coding agent",
   "license": "CC-BY-NC-SA-4.0",

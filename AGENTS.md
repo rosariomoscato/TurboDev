@@ -9,7 +9,7 @@
 **Terminal-based AI coding agent** — il tuo coding partner nel terminale.
 
 <p align="center">
-  <img src="assets/TurboDev2.png" alt="TurboDev Screenshot" width="700" />
+  <img src="assets/TurboDev.png" alt="TurboDev Screenshot" width="700" />
 </p>
 
 ## Cos'è

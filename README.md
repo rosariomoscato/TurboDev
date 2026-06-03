@@ -3,7 +3,7 @@
 **Terminal-based AI coding agent** — your coding partner in the terminal.
 
 <p align="center">
-  <img src="assets/TurboDev2.png" alt="TurboDev Screenshot" width="700" />
+  <img src="assets/TurboDev.png" alt="TurboDev Screenshot" width="700" />
 </p>
 
 ## What is it
