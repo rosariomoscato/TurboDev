@@ -17,7 +17,17 @@ if (cwdOverride) {
 
 if (args.includes('--setup')) {
   import('./ui/SetupWizard.js').then(({ default: SetupWizard }) => {
-    render(<SetupWizard onComplete={() => process.exit(0)} />);
+    const setupInstance = render(
+      <SetupWizard
+        onComplete={() => {
+          setupInstance.unmount();
+          setupInstance.waitUntilExit().then(() => {
+            render(<App />);
+          });
+        }}
+        onExit={() => process.exit(0)}
+      />
+    );
   });
 } else {
   render(<App />);

@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Text, Newline, useApp, useInput, useStdoutDimensions } from 'ink';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Box, Text, Newline, useApp, useInput, useStdout } from 'ink';
 import TextInput from 'ink-text-input';
-import SelectInput from 'ink-select-input';
 import Spinner from 'ink-spinner';
 import { loadConfig, saveConfig } from '../config/store.js';
 import { fetchAvailableModels, ModelInfo } from '../llm/models.js';
 
 interface Props {
   onComplete: () => void;
+  onExit: () => void;
 }
 
-// Popular models to show (filtered from OpenRouter's hundreds of models)
 const POPULAR_MODEL_PREFIXES = [
   'anthropic/claude-3',
   'openai/gpt-4',
@@ -21,7 +20,7 @@ const POPULAR_MODEL_PREFIXES = [
   'glm/glm',
 ];
 
-export default function SetupWizard({ onComplete }: Props) {
+export default function SetupWizard({ onComplete, onExit }: Props) {
   const { exit } = useApp();
   const [step, setStep] = useState(0);
   const [apiKey, setApiKey] = useState('');
@@ -29,12 +28,18 @@ export default function SetupWizard({ onComplete }: Props) {
   const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cursor, setCursor] = useState(0);
+  const [scrollOffset, setScrollOffset] = useState(0);
+  const { stdout } = useStdout();
+  const stepRef = useRef(step);
+  stepRef.current = step;
+  const readyRef = useRef(false);
 
-  // Check if API key already exists and skip to model selection
+  const visibleLimit = Math.max(5, (stdout?.rows ?? 24) - 8);
+
   useEffect(() => {
     const config = loadConfig();
     if (config.apiKey && !config.model) {
-      // API key exists but no model selected, fetch models and go to step 1
       setApiKey(config.apiKey);
       setLoading(true);
       fetchAvailableModels()
@@ -54,33 +59,62 @@ export default function SetupWizard({ onComplete }: Props) {
     }
   }, []);
 
-  // Global handler for Ctrl+C to exit at any time
+  useEffect(() => {
+    if (step === 2) {
+      const t = setTimeout(() => { readyRef.current = true; }, 1000);
+      return () => clearTimeout(t);
+    }
+    readyRef.current = false;
+  }, [step]);
+
+  const confirmModel = useCallback((model: ModelInfo) => {
+    setSelectedModel(model);
+    saveConfig({ model: model.id });
+    setStep(2);
+  }, []);
+
   useInput((input, key) => {
-    // Global handler for Ctrl+C to exit at any time
     if (key.ctrl && input === 'c') {
-      exit();
+      onExit();
       return;
     }
-    
-    // Handle exit from setup (Esc or q)
+
     if (key.escape || input === 'q') {
-      const config = loadConfig();
-      if (config.apiKey) { // If apiKey exists, assume we can exit setup and proceed
-        onComplete();
-      } else { // Otherwise, exit the app entirely
-        exit();
+      if (stepRef.current === 2) {
+        onExit();
+      } else {
+        const config = loadConfig();
+        if (config.apiKey) {
+          onComplete();
+        } else {
+          onExit();
+        }
       }
-      return; // Stop further processing
+      return;
     }
 
-    // Handle step-specific actions
-    if (step === 0) {
-      // API Key submission is handled by TextInput's onSubmit
-    } else if (step === 1) {
-      // Model selection handled by SelectInput's onSelect
-    } else if (step === 2) { // Setup Complete screen
-      if (key.return) {
-        onComplete();
+    if (stepRef.current === 2 && readyRef.current) {
+      onComplete();
+      return;
+    }
+
+    if (stepRef.current === 1 && !loading && models.length > 0) {
+      if (key.upArrow) {
+        setCursor(prev => {
+          const next = prev > 0 ? prev - 1 : models.length - 1;
+          if (next < scrollOffset) setScrollOffset(next);
+          else if (next >= scrollOffset + visibleLimit) setScrollOffset(next - visibleLimit + 1);
+          return next;
+        });
+      } else if (key.downArrow) {
+        setCursor(prev => {
+          const next = prev < models.length - 1 ? prev + 1 : 0;
+          if (next < scrollOffset) setScrollOffset(next);
+          else if (next >= scrollOffset + visibleLimit) setScrollOffset(next - visibleLimit + 1);
+          return next;
+        });
+      } else if (key.return) {
+        confirmModel(models[cursor]);
       }
     }
   });
@@ -93,10 +127,11 @@ export default function SetupWizard({ onComplete }: Props) {
 
     saveConfig({ apiKey });
     setLoading(true);
+    setCursor(0);
+    setScrollOffset(0);
 
     fetchAvailableModels()
       .then(fetchedModels => {
-        // Filter to popular models only (avoid overwhelming user with 500+ options)
         const popularModels = fetchedModels.filter(model =>
           POPULAR_MODEL_PREFIXES.some(prefix => model.id.startsWith(prefix))
         );
@@ -109,18 +144,6 @@ export default function SetupWizard({ onComplete }: Props) {
       .finally(() => {
         setLoading(false);
       });
-  };
-
-  const handleModelSelect = (item: { label: string; value: ModelInfo }) => {
-    const model = item.value;
-    setSelectedModel(model);
-    saveConfig({ model: model.id });
-    setStep(2);
-  };
-
-  const handleExit = () => {
-    onComplete();
-    exit();
   };
 
   if (step === 0) {
@@ -163,10 +186,7 @@ export default function SetupWizard({ onComplete }: Props) {
       );
     }
 
-    const items = models.map(model => ({
-      label: model.id,
-      value: model
-    }));
+    const visibleModels = models.slice(scrollOffset, scrollOffset + visibleLimit);
 
     return (
       <Box flexDirection="column">
@@ -175,10 +195,17 @@ export default function SetupWizard({ onComplete }: Props) {
         <Text>Showing {models.length} popular models (filtered from all available).</Text>
         <Text>Use ↑/↓ arrows to navigate, Enter to select:</Text>
         <Newline />
-        <SelectInput
-          items={items}
-          onSelect={handleModelSelect}
-        />
+        {visibleModels.map((model, i) => {
+          const idx = scrollOffset + i;
+          const isSelected = idx === cursor;
+          return (
+            <Box key={model.id}>
+              <Text color={isSelected ? 'cyan' : undefined} bold={isSelected}>
+                {isSelected ? '❯ ' : '  '}{model.id}
+              </Text>
+            </Box>
+          );
+        })}
         <Newline />
         <Text color="gray">Press Ctrl+C to exit</Text>
       </Box>
@@ -194,9 +221,8 @@ export default function SetupWizard({ onComplete }: Props) {
       <Text>  API Key: ••••••••••••••••••••••••••••</Text>
       <Text>  Model: {selectedModel?.id}</Text>
       <Newline />
-      <Text>Press any key to start using TurboDev...</Text>
-      <Newline />
-      <Text color="gray">Press 'q' to exit</Text>
+      <Text color="cyan">Press any key to start TurboDev</Text>
+      <Text color="gray">Press 'q' or Ctrl+C to exit</Text>
     </Box>
   );
 }
