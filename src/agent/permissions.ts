@@ -47,5 +47,12 @@ export function resolveToolPermission(
     return 'ask';
   }
 
+  if (toolName === 'git') {
+    return agent.permission.git ?? 'allow';
+  }
+  if (toolName === 'github') {
+    return agent.permission.github ?? 'allow';
+  }
+
   return 'allow';
 }

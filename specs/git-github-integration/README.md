@@ -46,9 +46,9 @@ graph TD
 - [x] [task-03-ui-components](./tasks/task-03-ui-components.md) — Create GithubAuthWizard and GitStatus components
 
 ### Wave 2
-- [ ] [task-04-agent-registration](./tasks/task-04-agent-registration.md) — Register git/github tools in agent system
-- [ ] [task-05-config-extension](./tasks/task-05-config-extension.md) — Extend config store for GitHub auth
-- [ ] [task-06-statusbar-git](./tasks/task-06-statusbar-git.md) — Add git branch/dirty indicator to StatusBar
+- [x] [task-04-agent-registration](./tasks/task-04-agent-registration.md) — Register git/github tools in agent system
+- [x] [task-05-config-extension](./tasks/task-05-config-extension.md) — Extend config store for GitHub auth
+- [x] [task-06-statusbar-git](./tasks/task-06-statusbar-git.md) — Add git branch/dirty indicator to StatusBar
 
 ### Wave 3
 - [ ] [task-07-slash-commands](./tasks/task-07-slash-commands.md) — Add slash commands and full App.tsx integration

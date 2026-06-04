@@ -5,10 +5,12 @@ import { mkdirTool, MkdirArgs } from '../tools/mkdir';
 import { grepTool, GrepArgs } from '../tools/grep';
 import { bashTool, BashArgs } from '../tools/bash';
 import { questionTool, QuestionArgs } from '../tools/question';
+import { gitTool, GitArgs } from '../tools/git.js';
+import { githubTool, GithubArgs } from '../tools/github.js';
 import type { AgentConfig } from './types.js';
 import { resolveToolPermission } from './permissions.js';
 
-export type ToolName = 'read_file' | 'list_files' | 'edit_file' | 'mkdir' | 'grep' | 'bash' | 'question' | 'task';
+export type ToolName = 'read_file' | 'list_files' | 'edit_file' | 'mkdir' | 'grep' | 'bash' | 'question' | 'git' | 'github' | 'task';
 
 export type ToolArgs =
   | ReadFileArgs
@@ -17,7 +19,9 @@ export type ToolArgs =
   | MkdirArgs
   | GrepArgs
   | BashArgs
-  | QuestionArgs;
+  | QuestionArgs
+  | GitArgs
+  | GithubArgs;
 
 export interface ToolDefinition {
   name: ToolName;
@@ -113,6 +117,43 @@ export const TOOL_REGISTRY: Record<ToolName, ToolDefinition> = {
     Returns: { question: string, answer: string }
     `.trim(),
     fn: questionTool
+  },
+  git: {
+    name: 'git',
+    description: `Execute Git operations for version control.
+Args: { operation: string, path?: string, files?: string[], message?: string, branch?: string, remote?: string, target?: string, count?: number, stashIndex?: number, tagName?: string }
+  - operation: One of: status, log, diff, add, commit, branch_list, branch_create, branch_delete, checkout, push, pull, fetch, stash_push, stash_pop, stash_list, reset_soft, reset_mixed, reset_hard, revert, merge, rebase, remote, show, tag_list, tag_create, tag_delete
+  - path: Working directory. Defaults to current directory. Optional.
+  - files: File paths for add/checkout. Optional.
+  - message: Commit message. Required for commit.
+  - branch: Branch name. Optional.
+  - remote: Remote name. Default: 'origin'. Optional.
+  - target: Commit hash or HEAD~N for reset/revert/show. Optional.
+  - count: Number of log entries. Default: 10. Optional.
+  - stashIndex: Stash index for stash_pop. Optional.
+  - tagName: Tag name. Optional.
+Returns: { success: boolean, operation: string, data?: any, error?: string }`,
+    fn: gitTool
+  },
+  github: {
+    name: 'github',
+    description: `Execute GitHub operations via the gh CLI.
+Args: { operation: string, title?: string, body?: string, base?: string, head?: string, draft?: boolean, state?: string, number?: number, reviewAction?: string, reviewBody?: string, tagName?: string, targetCommitish?: string, limit?: number }
+  - operation: One of: auth_status, pr_create, pr_list, pr_view, pr_merge, pr_checkout, pr_review, pr_close, issue_create, issue_list, issue_view, issue_close, repo_view, release_create, release_list
+  - title: Title for PR/issue/release. Required for create operations.
+  - body: Body/description text. Optional.
+  - base: Target branch for PR. Optional.
+  - head: Source branch for PR. Optional.
+  - draft: Create as draft PR. Optional.
+  - state: Filter by state (open/closed/all). Default: 'open'. Optional.
+  - number: PR/issue number. Required for view/merge/checkout/review/close.
+  - reviewAction: Review action (approve/request_changes/comment). Required for pr_review.
+  - reviewBody: Review comment body. Optional.
+  - tagName: Tag name for release. Required for release_create.
+  - targetCommitish: Target commitish for release. Optional.
+  - limit: Max items to return. Default: 20. Optional.
+Returns: { success: boolean, operation: string, data?: any, error?: string }`,
+    fn: githubTool
   },
   task: {
     name: 'task',

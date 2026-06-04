@@ -2,9 +2,16 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
+export interface GithubAuthState {
+  authenticated: boolean;
+  username?: string;
+  lastChecked?: string;
+}
+
 export interface TurboDevConfig {
   apiKey?: string;
   model?: string;
+  githubAuth?: GithubAuthState;
 }
 
 function getConfigPath(): string {
@@ -42,4 +49,13 @@ export function saveConfig(config: Partial<TurboDevConfig>): void {
     console.error('Error writing config file:', error);
     throw error;
   }
+}
+
+export function getGithubAuthState(): GithubAuthState | null {
+  const config = loadConfig();
+  return config.githubAuth || null;
+}
+
+export function saveGithubAuthState(state: GithubAuthState): void {
+  saveConfig({ githubAuth: state });
 }

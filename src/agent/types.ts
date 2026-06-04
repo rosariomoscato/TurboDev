@@ -7,6 +7,8 @@ export interface BashPermissionRules {
 export interface AgentPermission {
   edit?: PermissionAction;
   bash?: PermissionAction | BashPermissionRules;
+  git?: PermissionAction;
+  github?: PermissionAction;
 }
 
 export interface TaskPermission {

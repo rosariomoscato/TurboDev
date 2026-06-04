@@ -1,4 +1,4 @@
-import { TOOL_REGISTRY } from './tools';
+import { TOOL_REGISTRY } from './tools.js';
 import { AgentConfig } from './types.js';
 
 export function generateSystemPrompt(projectContext?: string, agent?: AgentConfig): string {
@@ -27,6 +27,14 @@ IMPORTANT RULES:
 4. If no tool is needed, respond normally to the user
 5. Only use one tool per line
 6. You can chain multiple tool calls (e.g., read a file, then edit it)
+
+GIT SAFETY RULES:
+1. NEVER force push to main or master branch
+2. NEVER push without the user's explicit request
+3. NEVER commit secrets, API keys, or credentials
+4. Always run git status and git diff before committing to show the user what will be committed
+5. Suggest meaningful commit messages based on the actual changes
+6. When creating PRs, suggest a descriptive title and body based on the commits
 
 Example tool call:
 tool: read_file({"filename": "src/index.ts"})

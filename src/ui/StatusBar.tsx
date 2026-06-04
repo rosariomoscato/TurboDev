@@ -1,6 +1,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import { Box, Text } from 'ink';
 import { AgentConfig } from '../agent/types.js';
+import { useGitStatus } from './GitStatus.js';
 
 interface Props {
   model?: string;
@@ -81,6 +82,7 @@ const StatusBar = memo(function StatusBar({ model, status, agent, tokenCount, co
   const width = Math.max(40, columns - 2);
   const isThinking = status === 'AI thinking...' || (status?.includes('thinking...') ?? false);
   const modelText = shortModel(model || 'No model');
+  const gitStatus = useGitStatus(process.cwd());
 
   const usagePercent = contextLength ? (tokenCount || 0) / contextLength : 0;
   let tokenColor = 'green';
@@ -96,6 +98,23 @@ const StatusBar = memo(function StatusBar({ model, status, agent, tokenCount, co
       <Text color={mapAgentColor(agent?.color)}>{agent?.name || 'editor'}</Text>
       <Text color="gray"> | </Text>
       <Text color="cyan">{modelText}</Text>
+      {gitStatus.isRepo && gitStatus.branch ? (
+        <>
+          <Text color="gray"> | </Text>
+          <Text color="cyan">{gitStatus.branch}</Text>
+          {gitStatus.dirty > 0 ? (
+            <Text color="yellow"> ●{gitStatus.dirty}</Text>
+          ) : (
+            <Text color="green"> ✓</Text>
+          )}
+          {gitStatus.ahead > 0 ? (
+            <Text color="cyan"> ↑{gitStatus.ahead}</Text>
+          ) : null}
+          {gitStatus.behind > 0 ? (
+            <Text color="yellow"> ↓{gitStatus.behind}</Text>
+          ) : null}
+        </>
+      ) : null}
       {tokenCount !== undefined && contextLength && contextLength > 0 ? (
         <>
           <Text color="gray"> | </Text>

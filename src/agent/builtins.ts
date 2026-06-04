@@ -13,11 +13,15 @@ export const editorAgent: AgentConfig = {
     grep: true,
     bash: true,
     question: true,
+    git: true,
+    github: true,
     task: true,
   },
   permission: {
     edit: 'allow',
     bash: 'allow',
+    git: 'allow',
+    github: 'allow',
   },
   color: 'cyan',
 };
@@ -40,11 +44,15 @@ If a tool returns a "permission denied" error, briefly acknowledge it and sugges
     grep: true,
     bash: true,
     question: true,
+    git: true,
+    github: true,
     task: false,
   },
   permission: {
     edit: 'ask',
     bash: 'ask',
+    git: 'ask',
+    github: 'ask',
   },
   color: 'yellow',
 };
