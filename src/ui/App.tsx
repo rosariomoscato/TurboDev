@@ -23,6 +23,10 @@ import { getContextLength } from '../llm/models.js';
 import { saveSession, loadSession, listSessions, getLatestSession, generateSessionId, generateTitle, deleteSession } from '../session/store.js';
 import type { Session } from '../session/types.js';
 import { version } from '../../package.json';
+import { gitTool } from '../tools/git.js';
+import { githubTool } from '../tools/github.js';
+import GithubAuthWizard from './GithubAuthWizard.js';
+import { saveGithubAuthState } from '../config/store.js';
 
 const versionString = `v${version}${__GIT_HASH__ !== 'dev' ? ` (${__GIT_HASH__})` : ''}`;
 
@@ -60,6 +64,24 @@ function relativeTime(dateStr: string): string {
   return `${diffD}g fa`;
 }
 
+/** Format structured git tool output into human-readable text for the chat. */
+function formatGitOutput(operation: string, data: any): string {
+  if (operation === 'status') {
+    const lines: string[] = [`Branch: ${data.branch}`];
+    if (data.staged?.length > 0) lines.push(`Staged: ${data.staged.join(', ')}`);
+    if (data.modified?.length > 0) lines.push(`Modified: ${data.modified.join(', ')}`);
+    if (data.not_added?.length > 0) lines.push(`Untracked: ${data.not_added.join(', ')}`);
+    if (data.ahead > 0) lines.push(`Ahead: ${data.ahead} commits`);
+    if (data.behind > 0) lines.push(`Behind: ${data.behind} commits`);
+    if (lines.length === 1) lines.push('Working tree clean');
+    return lines.join('\n');
+  }
+  if (operation.startsWith('log')) {
+    return data.map((c: any) => `${c.hash?.slice(0,7) || c} ${c.message || ''} (${c.date || ''})`).join('\n');
+  }
+  return JSON.stringify(data, null, 2);
+}
+
 export default function App() {
   const { exit } = useApp();
   const [config, setConfig] = useState(loadConfig());
@@ -67,6 +89,7 @@ export default function App() {
   const [agentsContext, setAgentsContext] = useState<string | null>(() => loadAgentsMd(process.cwd()));
   const [showInitWizard, setShowInitWizard] = useState(false);
   const [showBanner, setShowBanner] = useState(true);
+  const [showGithubAuth, setShowGithubAuth] = useState(false);
 
   const [allAgents] = useState<AgentConfig[]>(() => loadAllAgents(process.cwd()));
   const [primaryAgents] = useState<AgentConfig[]>(() => allAgents.filter(a => a.mode !== 'subagent' && !a.hidden));
@@ -510,7 +533,41 @@ export default function App() {
       if (command === 'help') {
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: 'Commands: /help, /init, /model, /agent, /setup, /clear, /compact, /new, /sessions, /exit\nTab: switch agent'
+          content: [
+            'General Commands:',
+            '  /help           Show this help',
+            '  /init           Initialize project (AGENTS.md)',
+            '  /model          Change AI model',
+            '  /agent          Switch agent',
+            '  /setup          Run setup wizard',
+            '  /clear          Clear conversation',
+            '  /compact        Compact conversation',
+            '  /new            New session',
+            '  /sessions       List sessions',
+            '  /exit           Exit TurboDev',
+            '',
+            'Git Commands:',
+            '  /git status     Show working tree status',
+            '  /git log [n]    Show commit log (default 10)',
+            '  /git diff       Show unstaged changes',
+            '  /git add [f]    Stage files (default: all)',
+            '  /git stash      Stash changes',
+            '  /git remote     List remotes',
+            '  /git help       Show git command help',
+            '  /commit <msg>   Stage all and commit',
+            '  /push           Push to remote',
+            '  /pull           Pull from remote',
+            '  /branch         List branches',
+            '  /branch <name>  Switch branch',
+            '  /rollback       Show recent commits to revert',
+            '',
+            'GitHub Commands:',
+            '  /pr list        List pull requests',
+            '  /pr <title>     Create a pull request',
+            '  /gh auth        GitHub authentication wizard',
+            '',
+            'Tab: switch agent',
+          ].join('\n')
         }]);
         return;
       }
@@ -623,6 +680,359 @@ export default function App() {
         return;
       }
 
+      // ── Git slash commands ──────────────────────────────────────────
+
+      if (command === 'git status') {
+        setStatus('Running git status...');
+        try {
+          const result = await gitTool({ operation: 'status' });
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: result.success
+              ? formatGitOutput('status', result.data)
+              : `Git error: ${result.error}`
+          }]);
+        } catch (err: any) {
+          setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
+        }
+        setStatus('');
+        return;
+      }
+
+      if (command.startsWith('git log')) {
+        const parts = command.split(/\s+/);
+        const count = parts.length > 2 ? parseInt(parts[2], 10) : 10;
+        setStatus(`Running git log (${count})...`);
+        try {
+          const result = await gitTool({ operation: 'log', count: isNaN(count) ? 10 : count });
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: result.success
+              ? formatGitOutput('log', result.data)
+              : `Git error: ${result.error}`
+          }]);
+        } catch (err: any) {
+          setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
+        }
+        setStatus('');
+        return;
+      }
+
+      if (command === 'git diff') {
+        setStatus('Running git diff...');
+        try {
+          const result = await gitTool({ operation: 'diff' });
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: result.success
+              ? (result.data || 'No changes.')
+              : `Git error: ${result.error}`
+          }]);
+        } catch (err: any) {
+          setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
+        }
+        setStatus('');
+        return;
+      }
+
+      if (command.startsWith('git add')) {
+        const filesArg = command.slice('git add'.length).trim();
+        const files = filesArg ? filesArg.split(/\s+/) : ['.'];
+        setStatus(`Staging files: ${files.join(', ')}...`);
+        try {
+          const result = await gitTool({ operation: 'add', files });
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: result.success
+              ? `Staged: ${(result.data?.files || files).join(', ')}`
+              : `Git error: ${result.error}`
+          }]);
+        } catch (err: any) {
+          setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
+        }
+        setStatus('');
+        return;
+      }
+
+      if (command === 'git stash') {
+        setStatus('Stashing changes...');
+        try {
+          const result = await gitTool({ operation: 'stash_push' });
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: result.success
+              ? 'Changes stashed successfully.'
+              : `Git error: ${result.error}`
+          }]);
+        } catch (err: any) {
+          setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
+        }
+        setStatus('');
+        return;
+      }
+
+      if (command === 'git remote') {
+        setStatus('Listing remotes...');
+        try {
+          const result = await gitTool({ operation: 'remote' });
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: result.success
+              ? formatGitOutput('remote', result.data)
+              : `Git error: ${result.error}`
+          }]);
+        } catch (err: any) {
+          setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
+        }
+        setStatus('');
+        return;
+      }
+
+      if (command === 'git' || command === 'git help') {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: [
+            'Git Commands:',
+            '  /git status     Show working tree status',
+            '  /git log [n]    Show commit log (default 10)',
+            '  /git diff       Show unstaged changes',
+            '  /git add [f]    Stage files (default: all)',
+            '  /git stash      Stash changes',
+            '  /git remote     List remotes',
+            '',
+            'Shorthands:',
+            '  /commit <msg>   Stage all and commit',
+            '  /push           Push to remote',
+            '  /pull           Pull from remote',
+            '  /branch         List branches',
+            '  /branch <name>  Switch branch',
+            '  /rollback       Show recent commits to revert',
+          ].join('\n')
+        }]);
+        return;
+      }
+
+      if (command.startsWith('commit')) {
+        const msg = command.slice('commit'.length).trim();
+        if (!msg) {
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: 'Usage: /commit <message>'
+          }]);
+          return;
+        }
+        setStatus('Staging and committing...');
+        try {
+          const addResult = await gitTool({ operation: 'add', files: ['.'] });
+          if (!addResult.success) {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `Git add error: ${addResult.error}`
+            }]);
+            setStatus('');
+            return;
+          }
+          const commitResult = await gitTool({ operation: 'commit', message: msg });
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: commitResult.success
+              ? `Committed: ${commitResult.data?.commit || msg}`
+              : `Git error: ${commitResult.error}`
+          }]);
+        } catch (err: any) {
+          setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
+        }
+        setStatus('');
+        return;
+      }
+
+      if (command === 'push') {
+        setStatus('Pushing to remote...');
+        try {
+          const result = await gitTool({ operation: 'push' });
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: result.success
+              ? 'Pushed successfully.'
+              : `Git error: ${result.error}`
+          }]);
+        } catch (err: any) {
+          setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
+        }
+        setStatus('');
+        return;
+      }
+
+      if (command === 'pull') {
+        setStatus('Pulling from remote...');
+        try {
+          const result = await gitTool({ operation: 'pull' });
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: result.success
+              ? `Pulled successfully. Files changed: ${result.data?.files?.length ?? 0}`
+              : `Git error: ${result.error}`
+          }]);
+        } catch (err: any) {
+          setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
+        }
+        setStatus('');
+        return;
+      }
+
+      if (command === 'branch') {
+        setStatus('Listing branches...');
+        try {
+          const result = await gitTool({ operation: 'branch_list' });
+          if (result.success) {
+            const branches = result.data?.branches || [];
+            const lines = branches.map((b: any) =>
+              `${b.current ? '* ' : '  '}${b.name} ${b.commit ? '(' + b.commit.slice(0, 7) + ')' : ''}`
+            );
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: lines.length > 0 ? lines.join('\n') : 'No branches found.'
+            }]);
+          } else {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `Git error: ${result.error}`
+            }]);
+          }
+        } catch (err: any) {
+          setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
+        }
+        setStatus('');
+        return;
+      }
+
+      if (command.startsWith('branch ')) {
+        const branchName = command.slice('branch '.length).trim();
+        if (!branchName) {
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: 'Usage: /branch <name>'
+          }]);
+          return;
+        }
+        setStatus(`Switching to branch ${branchName}...`);
+        try {
+          const result = await gitTool({ operation: 'checkout', branch: branchName });
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: result.success
+              ? `Switched to branch: ${branchName}`
+              : `Git error: ${result.error}`
+          }]);
+        } catch (err: any) {
+          setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
+        }
+        setStatus('');
+        return;
+      }
+
+      // ── GitHub slash commands ───────────────────────────────────────
+
+      if (command === 'pr list') {
+        setStatus('Listing pull requests...');
+        try {
+          const result = await githubTool({ operation: 'pr_list' });
+          if (result.success && Array.isArray(result.data)) {
+            const lines = result.data.map((pr: any) =>
+              `#${pr.number} ${pr.title} (${pr.author?.login || pr.author || 'unknown'}) [${pr.headRefName || ''}]`
+            );
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: lines.length > 0 ? lines.join('\n') : 'No pull requests found.'
+            }]);
+          } else {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: result.success
+                ? JSON.stringify(result.data, null, 2)
+                : `GitHub error: ${result.error}`
+            }]);
+          }
+        } catch (err: any) {
+          setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
+        }
+        setStatus('');
+        return;
+      }
+
+      if (command.startsWith('pr ')) {
+        const title = command.slice('pr '.length).trim();
+        if (!title) {
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: 'Usage: /pr <title>'
+          }]);
+          return;
+        }
+        setStatus('Getting current branch...');
+        try {
+          const statusResult = await gitTool({ operation: 'status' });
+          if (!statusResult.success) {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `Git error: ${statusResult.error}`
+            }]);
+            setStatus('');
+            return;
+          }
+          const currentBranch = statusResult.data?.branch;
+          setStatus(`Creating PR: "${title}" from ${currentBranch}...`);
+          const prResult = await githubTool({
+            operation: 'pr_create',
+            title,
+            head: currentBranch,
+          });
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: prResult.success
+              ? `Pull request created: ${prResult.data || title}`
+              : `GitHub error: ${prResult.error}`
+          }]);
+        } catch (err: any) {
+          setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
+        }
+        setStatus('');
+        return;
+      }
+
+      if (command === 'rollback') {
+        setStatus('Loading recent commits...');
+        try {
+          const result = await gitTool({ operation: 'log', count: 10 });
+          if (result.success) {
+            const lines = result.data.map((c: any, i: number) =>
+              `${i + 1}. ${c.hash?.slice(0,7)} ${c.message || ''} (${c.date || ''})`
+            );
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: [
+                'Recent commits (ask the AI to revert or reset, or use git revert <hash>):',
+                ...lines,
+              ].join('\n')
+            }]);
+          } else {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `Git error: ${result.error}`
+            }]);
+          }
+        } catch (err: any) {
+          setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
+        }
+        setStatus('');
+        return;
+      }
+
+      if (command === 'gh auth') {
+        setShowGithubAuth(true);
+        return;
+      }
+
       if (command.trim()) {
         setMessages(prev => [...prev, {
           role: 'assistant',
@@ -724,6 +1134,24 @@ export default function App() {
             content: ctx
               ? `AGENTS.md loaded from ${process.cwd()}/AGENTS.md`
               : 'AGENTS.md not found.'
+          }]);
+        }}
+      />
+    );
+  }
+
+  if (showGithubAuth) {
+    return (
+      <GithubAuthWizard
+        onComplete={(authenticated) => {
+          saveGithubAuthState({
+            authenticated,
+            lastChecked: new Date().toISOString(),
+          });
+          setShowGithubAuth(false);
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: authenticated ? 'GitHub authentication successful!' : 'GitHub authentication skipped.'
           }]);
         }}
       />

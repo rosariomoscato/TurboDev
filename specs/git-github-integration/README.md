@@ -51,4 +51,4 @@ graph TD
 - [x] [task-06-statusbar-git](./tasks/task-06-statusbar-git.md) — Add git branch/dirty indicator to StatusBar
 
 ### Wave 3
-- [ ] [task-07-slash-commands](./tasks/task-07-slash-commands.md) — Add slash commands and full App.tsx integration
+- [x] [task-07-slash-commands](./tasks/task-07-slash-commands.md) — Add slash commands and full App.tsx integration
