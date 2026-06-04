@@ -1,0 +1,10 @@
+.agents/
+.github/
+.turbodev/
+docs/
+src/
+specs/
+assets/
+tsconfig.json
+tsup.config.ts
+AGENTS.md

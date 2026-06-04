@@ -1,11 +1,31 @@
 {
   "name": "@rosariomoscato/turbodev",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "type": "module",
   "description": "Terminal-based AI coding agent",
+  "author": "Rosario Moscato",
   "license": "CC-BY-NC-SA-4.0",
+  "keywords": [
+    "ai",
+    "agent",
+    "cli",
+    "terminal",
+    "coding",
+    "llm",
+    "openrouter",
+    "chatbot",
+    "tui"
+  ],
+  "homepage": "https://rosmoscato.xyz/turbodev/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rosariomoscato/TurboDev.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rosariomoscato/TurboDev/issues"
+  },
   "bin": {
-    "turbodev": "./dist/index.js"
+    "turbodev": "dist/index.js"
   },
   "scripts": {
     "dev": "tsx watch src/index.tsx",
