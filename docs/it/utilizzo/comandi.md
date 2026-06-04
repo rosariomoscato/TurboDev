@@ -2,9 +2,9 @@
 
 I comandi slash di TurboDev.
 
-Tutti i comandi iniziano con `/`. Digita `/` nella barra di input per vedere i comandi disponibili.
+Tutti i comandi iniziano con `/`. Digita `/` nella barra di input per aprire la palette dei comandi — naviga con `↑`/`↓` e seleziona con `Invio`.
 
-## Riferimento
+## Comandi generali
 
 | Comando | Descrizione |
 |---------|-------------|
@@ -19,7 +19,34 @@ Tutti i comandi iniziano con `/`. Digita `/` nella barra di input per vedere i c
 | `/sessions` | Elenca e passa da una sessione all'altra |
 | `/exit` | Esci da TurboDev |
 
-## /init
+## Comandi Git
+
+| Comando | Descrizione |
+|---------|-------------|
+| `/git status` | Mostra lo stato dell'albero di lavoro |
+| `/git log` | Mostra il log dei commit (10 per impostazione predefinita) |
+| `/git diff` | Mostra le modifiche non in staging |
+| `/git add` | Aggiunge file allo staging (tutti per impostazione predefinita) |
+| `/git stash` | Salva le modifiche in stash |
+| `/git remote` | Elenca i remote |
+| `/commit <msg>` | Aggiunge tutto allo staging e fa commit con il messaggio |
+| `/push` | Effettua push del branch corrente sul remote |
+| `/pull` | Effettua pull dal remote |
+| `/branch` | Elenca i branch locali |
+| `/branch <name>` | Passa al branch specificato |
+| `/rollback` | Mostra i commit recenti per il rollback |
+
+## Comandi GitHub
+
+| Comando | Descrizione |
+|---------|-------------|
+| `/pr list` | Elenca le pull request aperte |
+| `/pr <titolo>` | Crea una pull request con il titolo specificato |
+| `/gh auth` | Avvia la procedura guidata di autenticazione GitHub |
+
+## Dettagli dei comandi
+
+### /init
 
 Crea o aggiorna `AGENTS.md` nel tuo progetto.
 
@@ -34,7 +61,7 @@ Se `AGENTS.md` esiste già, puoi scegliere di:
 
 La procedura guidata rileva il tipo di progetto e genera le sezioni pertinenti.
 
-## /model
+### /model
 
 Apre un selettore interattivo dei modelli.
 
@@ -44,7 +71,7 @@ Apre un selettore interattivo dei modelli.
 
 Naviga con `↑`/`↓` o `j`/`k`, seleziona con un numero (1–9), annulla con `Esc` o `q`. Se ci sono più di 9 modelli, sono disponibili più pagine.
 
-## /agent
+### /agent
 
 Apre il selettore degli agenti.
 
@@ -54,7 +81,7 @@ Apre il selettore degli agenti.
 
 Digita il numero dell'agente per selezionarlo, premi `Esc` per annullare. Mostra tutti gli agenti primari disponibili con le relative descrizioni.
 
-## /setup
+### /setup
 
 Esegue di nuovo la procedura guidata iniziale per cambiare la chiave API o il modello.
 
@@ -62,7 +89,7 @@ Esegue di nuovo la procedura guidata iniziale per cambiare la chiave API o il mo
 /setup
 ```
 
-## /clear
+### /clear
 
 Cancella l'intera cronologia della chat e il contesto della conversazione.
 
@@ -70,7 +97,7 @@ Cancella l'intera cronologia della chat e il contesto della conversazione.
 /clear
 ```
 
-## /compact
+### /compact
 
 Compatta la conversazione riassumendola tramite AI. Libera spazio nella finestra di contesto, permettendo sessioni più lunghe senza perdere i punti chiave della conversazione.
 
@@ -80,7 +107,7 @@ Compatta la conversazione riassumendola tramite AI. Libera spazio nella finestra
 
 L'auto-compattazione si attiva al **85%** della finestra di contesto. Riceverai una notifica al **75%**. Usa `/compact` manualmente in qualsiasi momento.
 
-## /new
+### /new
 
 Inizia una nuova sessione vuota. La sessione corrente viene salvata automaticamente e può essere ripresa in seguito con `/sessions`.
 
@@ -88,7 +115,7 @@ Inizia una nuova sessione vuota. La sessione corrente viene salvata automaticame
 /new
 ```
 
-## /sessions
+### /sessions
 
 Elenca tutte le sessioni salvate, ordinate per le più recenti. Seleziona una sessione digitandone il numero per ripristinarla.
 
@@ -98,7 +125,25 @@ Elenca tutte le sessioni salvate, ordinate per le più recenti. Seleziona una se
 
 Mostra ogni sessione con titolo, tempo relativo e numero di messaggi. Premi `Esc` per annullare.
 
-## /exit
+### /commit
+
+Aggiunge tutte le modifiche allo staging e fa commit con il messaggio fornito.
+
+```
+/commit fix: risolto problema di login
+```
+
+Equivalente a `git add -A && git commit -m "fix: risolto problema di login"`.
+
+### /gh auth
+
+Avvia la procedura guidata di autenticazione GitHub. Supporta il login via browser o token di accesso personale. Richiede che la [GitHub CLI (`gh`)](https://cli.github/) sia installata.
+
+```
+/gh auth
+```
+
+### /exit
 
 Esce da TurboDev.
 

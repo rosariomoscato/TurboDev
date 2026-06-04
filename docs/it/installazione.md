@@ -26,6 +26,18 @@ npm link
 
 Dopo l'installazione, esegui `turbodev` da qualsiasi directory di progetto.
 
+Puoi anche specificare una directory di lavoro:
+
+```bash
+turbodev --cwd /percorso/del/progetto
+```
+
+Oppure impostare la variabile d'ambiente:
+
+```bash
+TURBODEV_CWD=/percorso/del/progetto turbodev
+```
+
 ## Verifica dell'installazione
 
 ```bash

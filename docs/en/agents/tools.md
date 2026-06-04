@@ -16,6 +16,8 @@ Agents have access to a set of tools for interacting with your codebase. Tool av
 | `bash` | Execute shell commands |
 | `question` | Ask the user a question |
 | `task` | Invoke a subagent |
+| `git` | Execute Git operations |
+| `github` | Execute GitHub operations |
 
 ## read_file
 
@@ -100,6 +102,40 @@ task({ "agent": "explore", "prompt": "find all API routes", "description": "Expl
 ::: warning
 The `task` tool is disabled for the plan agent by default.
 :::
+
+## git
+
+Execute Git operations via simple-git. Supports 26 operations including status, log, diff, add, commit, push, pull, branch, stash, remote, and more.
+
+**Args**: `{ operation: string, args?: any }`
+
+```
+git({ "operation": "status" })
+git({ "operation": "log", "args": { "maxCount": 10 } })
+git({ "operation": "commit", "args": { "message": "fix: resolve bug" } })
+```
+
+Available operations: `status`, `log`, `diff`, `add`, `commit`, `push`, `pull`, `branch`, `checkout`, `stash`, `remote`, `fetch`, `reset`, `revert`, `tag`, `merge`, `rebase`, `init`, `clone`, `addRemote`, `removeRemote`, `listRemotes`, `raw`, `diffSummary`, `show`, `clean`.
+
+::: danger
+Git operations that modify the repository (commit, push, reset, revert, clean, etc.) require explicit permission from the user.
+:::
+
+## github
+
+Execute GitHub operations via the `gh` CLI. Supports 15 operations including PR management, issues, releases, and authentication.
+
+**Args**: `{ operation: string, args?: any }`
+
+```
+github({ "operation": "createPr", "args": { "title": "Fix bug", "body": "Description" } })
+github({ "operation": "listPrs" })
+github({ "operation": "createIssue", "args": { "title": "Bug report", "body": "Steps to reproduce" } })
+```
+
+Available operations: `authStatus`, `createPr`, `listPrs`, `viewPr`, `mergePr`, `closePr`, `createIssue`, `listIssues`, `closeIssue`, `createRelease`, `listReleases`, `repoView`, `repoClone`, `runList`, `runView`.
+
+Requires the [GitHub CLI (`gh`)](https://cli.github/) to be installed and authenticated. Run `/gh auth` to set up authentication.
 
 ## Controlling Tool Access
 

@@ -28,7 +28,42 @@ import { githubTool } from '../tools/github.js';
 import GithubAuthWizard from './GithubAuthWizard.js';
 import { saveGithubAuthState } from '../config/store.js';
 
-const versionString = `v${version}${__GIT_HASH__ !== 'dev' ? ` (${__GIT_HASH__})` : ''}`;
+const gitHash = typeof __GIT_HASH__ !== 'undefined' ? __GIT_HASH__ : 'dev';
+const versionString = `v${version}${gitHash !== 'dev' ? ` (${gitHash})` : ''}`;
+
+interface PaletteCommand {
+  label: string;
+  value: string;
+  description: string;
+  template?: boolean;
+}
+
+const PALETTE_COMMANDS: PaletteCommand[] = [
+  { label: '/agent', value: '/agent', description: 'Switch agent' },
+  { label: '/branch', value: '/branch', description: 'List branches' },
+  { label: '/branch ...', value: '/branch ', description: 'Switch branch', template: true },
+  { label: '/clear', value: '/clear', description: 'Clear chat history' },
+  { label: '/commit ...', value: '/commit ', description: 'Stage all and commit', template: true },
+  { label: '/compact', value: '/compact', description: 'Compact conversation' },
+  { label: '/exit', value: '/exit', description: 'Exit TurboDev' },
+  { label: '/gh auth', value: '/gh auth', description: 'GitHub auth wizard' },
+  { label: '/git diff', value: '/git diff', description: 'Show unstaged changes' },
+  { label: '/git log', value: '/git log', description: 'Show commit log' },
+  { label: '/git remote', value: '/git remote', description: 'List remotes' },
+  { label: '/git stash', value: '/git stash', description: 'Stash changes' },
+  { label: '/git status', value: '/git status', description: 'Show working tree status' },
+  { label: '/help', value: '/help', description: 'Show available commands' },
+  { label: '/init', value: '/init', description: 'Initialize AGENTS.md' },
+  { label: '/model', value: '/model', description: 'Select your model' },
+  { label: '/new', value: '/new', description: 'Start new session' },
+  { label: '/pr ...', value: '/pr ', description: 'Create a pull request', template: true },
+  { label: '/pr list', value: '/pr list', description: 'List pull requests' },
+  { label: '/pull', value: '/pull', description: 'Pull from remote' },
+  { label: '/push', value: '/push', description: 'Push to remote' },
+  { label: '/rollback', value: '/rollback', description: 'Show recent commits' },
+  { label: '/sessions', value: '/sessions', description: 'List and switch sessions' },
+  { label: '/setup', value: '/setup', description: 'Re-run setup wizard' },
+].sort((a, b) => a.label.localeCompare(b.label));
 
 function mapAgentColor(color?: string): string {
   const colorMap: Record<string, string> = {
@@ -113,6 +148,10 @@ export default function App() {
   const [pendingSession, setPendingSession] = useState<Session | null>(null);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [showAgentSelector, setShowAgentSelector] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [paletteIndex, setPaletteIndex] = useState(0);
+  const [inputKey, setInputKey] = useState(0);
+  const [inputPrefill, setInputPrefill] = useState('');
   const [models, setModels] = useState<{id: string}[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const modelsPerPage = 9;
@@ -141,7 +180,7 @@ export default function App() {
 
   useEffect(() => {
     if (showSessionPrompt) return;
-    const timer = setTimeout(() => setShowBanner(false), 5000);
+    const timer = setTimeout(() => setShowBanner(false), 2500);
     return () => clearTimeout(timer);
   }, [showSessionPrompt]);
 
@@ -268,15 +307,23 @@ export default function App() {
     setShowAgentSelector(false);
   };
 
-  const isInputMode = showModelSelector || showAgentSelector || showSessionSelector;
+  const isInputMode = showModelSelector || showAgentSelector || showSessionSelector || showCommandPalette;
 
   useInput((input, key) => {
     if (showSessionPrompt) {
       const answer = input.toLowerCase();
+      const sessionToHandle = pendingSession;
       if (answer === 'y' || answer === 's') {
-        if (pendingSession) restoreSession(pendingSession);
+        setShowSessionPrompt(false);
+        setShowBanner(false);
+        setPendingSession(null);
+        if (sessionToHandle) restoreSession(sessionToHandle);
       } else if (answer === 'n') {
-        setSessionId(generateSessionId());
+        setShowSessionPrompt(false);
+        setShowBanner(false);
+        setPendingSession(null);
+        const newId = generateSessionId();
+        setSessionId(newId);
         setSessionCreatedAt(new Date().toISOString());
         const sysPrompt = generateSystemPrompt(agentsContext ?? undefined, currentAgent);
         setTokenCount(estimateTokens(sysPrompt));
@@ -284,9 +331,6 @@ export default function App() {
       } else {
         return;
       }
-      setShowSessionPrompt(false);
-      setShowBanner(false);
-      setPendingSession(null);
       return;
     }
 
@@ -295,6 +339,35 @@ export default function App() {
       abortControllerRef.current = null;
       setStatus('');
       setThinkingStart(0);
+      return;
+    }
+
+    if (showCommandPalette) {
+      if (key.escape) {
+        setShowCommandPalette(false);
+        setPaletteIndex(0);
+        return;
+      }
+      if (key.upArrow) {
+        setPaletteIndex((prev) => (prev - 1 + PALETTE_COMMANDS.length) % PALETTE_COMMANDS.length);
+        return;
+      }
+      if (key.downArrow) {
+        setPaletteIndex((prev) => (prev + 1) % PALETTE_COMMANDS.length);
+        return;
+      }
+      if (key.return) {
+        const cmd = PALETTE_COMMANDS[paletteIndex];
+        setShowCommandPalette(false);
+        setPaletteIndex(0);
+        if (cmd.template) {
+          setInputPrefill(cmd.value);
+          setInputKey((k) => k + 1);
+        } else {
+          handleUserInput(cmd.value);
+        }
+        return;
+      }
       return;
     }
 
@@ -1280,6 +1353,19 @@ export default function App() {
             )}
           </Box>
         )}
+        {showCommandPalette && (
+          <Box flexDirection="column" alignItems="flex-start" marginY={1}>
+            <Text color="cyan" bold>Command palette</Text>
+            {PALETTE_COMMANDS.map((cmd, i) => (
+              <Box key={cmd.label}>
+                <Text color={i === paletteIndex ? 'green' : 'gray'}>
+                  {i === paletteIndex ? '> ' : '  '}{cmd.label} — {cmd.description}
+                </Text>
+              </Box>
+            ))}
+            <Text color="gray">↑/↓ navigate · Enter select · Esc cancel</Text>
+          </Box>
+        )}
       </Box>
       {!isInputMode && !showSessionPrompt && (!status || pendingPermission || pendingQuestion) && (
         <Box flexDirection="column">
@@ -1300,7 +1386,13 @@ export default function App() {
               ))}
             </>
           )}
-          <InputBar onSubmit={activeOnSubmit} agentName={currentAgent.name} />
+          <InputBar
+            key={inputKey}
+            onSubmit={activeOnSubmit}
+            onSlash={() => { setPaletteIndex(0); setShowCommandPalette(true); }}
+            agentName={currentAgent.name}
+            initialValue={inputPrefill}
+          />
         </Box>
       )}
       <Box marginTop={1}>

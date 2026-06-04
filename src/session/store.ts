@@ -9,6 +9,30 @@ export function getSessionsDir(cwd: string): string {
   return dir;
 }
 
+function getSessionPromptStatePath(cwd: string): string {
+  const dir = path.join(cwd, '.turbodev');
+  fs.mkdirSync(dir, { recursive: true });
+  return path.join(dir, 'session-prompt-state.json');
+}
+
+export function getAnsweredSessionId(cwd: string): string | null {
+  try {
+    const raw = fs.readFileSync(getSessionPromptStatePath(cwd), 'utf-8');
+    const parsed = JSON.parse(raw);
+    return typeof parsed.answeredSessionId === 'string' ? parsed.answeredSessionId : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setAnsweredSessionId(cwd: string, sessionId: string): void {
+  fs.writeFileSync(
+    getSessionPromptStatePath(cwd),
+    JSON.stringify({ answeredSessionId: sessionId }, null, 2),
+    'utf-8'
+  );
+}
+
 export function generateSessionId(): string {
   return crypto.randomBytes(4).toString('hex');
 }

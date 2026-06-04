@@ -2,3 +2,5 @@ node_modules/
 dist/
 .turbodev/
 docs/.vitepress/cache/
+specs/
+AGENTS.md

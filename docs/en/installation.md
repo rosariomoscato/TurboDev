@@ -26,6 +26,18 @@ npm link
 
 After installing, run `turbodev` from any project directory.
 
+You can also specify a working directory:
+
+```bash
+turbodev --cwd /path/to/project
+```
+
+Or set the environment variable:
+
+```bash
+TURBODEV_CWD=/path/to/project turbodev
+```
+
 ## Verify Installation
 
 ```bash

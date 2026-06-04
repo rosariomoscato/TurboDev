@@ -16,6 +16,8 @@ Gli agenti hanno accesso a un insieme di strumenti per interagire con il tuo cod
 | `bash` | Esegue comandi shell |
 | `question` | Pone una domanda all'utente |
 | `task` | Invoca un sottoagente |
+| `git` | Esegue operazioni Git |
+| `github` | Esegue operazioni GitHub |
 
 ## read_file
 
@@ -100,6 +102,40 @@ task({ "agent": "explore", "prompt": "trova tutte le route API", "description": 
 ::: warning Attenzione
 Lo strumento `task` è disabilitato per l'agente plan per impostazione predefinita.
 :::
+
+## git
+
+Esegue operazioni Git tramite simple-git. Supporta 26 operazioni tra cui status, log, diff, add, commit, push, pull, branch, stash, remote e altre.
+
+**Argomenti**: `{ operation: string, args?: any }`
+
+```
+git({ "operation": "status" })
+git({ "operation": "log", "args": { "maxCount": 10 } })
+git({ "operation": "commit", "args": { "message": "fix: risolto bug" } })
+```
+
+Operazioni disponibili: `status`, `log`, `diff`, `add`, `commit`, `push`, `pull`, `branch`, `checkout`, `stash`, `remote`, `fetch`, `reset`, `revert`, `tag`, `merge`, `rebase`, `init`, `clone`, `addRemote`, `removeRemote`, `listRemotes`, `raw`, `diffSummary`, `show`, `clean`.
+
+::: danger Pericolo
+Le operazioni Git che modificano il repository (commit, push, reset, revert, clean, ecc.) richiedono l'autorizzazione esplicita dell'utente.
+:::
+
+## github
+
+Esegue operazioni GitHub tramite la CLI `gh`. Supporta 15 operazioni tra cui gestione PR, issue, release e autenticazione.
+
+**Argomenti**: `{ operation: string, args?: any }`
+
+```
+github({ "operation": "createPr", "args": { "title": "Correzione bug", "body": "Descrizione" } })
+github({ "operation": "listPrs" })
+github({ "operation": "createIssue", "args": { "title": "Segnalazione bug", "body": "Passi per riprodurre" } })
+```
+
+Operazioni disponibili: `authStatus`, `createPr`, `listPrs`, `viewPr`, `mergePr`, `closePr`, `createIssue`, `listIssues`, `closeIssue`, `createRelease`, `listReleases`, `repoView`, `repoClone`, `runList`, `runView`.
+
+Richiede che la [GitHub CLI (`gh`)](https://cli.github/) sia installata e autenticata. Esegui `/gh auth` per configurare l'autenticazione.
 
 ## Controllare l'accesso agli strumenti
 
