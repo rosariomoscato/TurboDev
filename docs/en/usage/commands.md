@@ -8,41 +8,41 @@ All commands start with `/`. Type `/` in the input bar to open the command palet
 
 | Command | Description |
 |---------|-------------|
+| `/agent` | Open agent selector |
+| `/clear` | Clear chat history |
+| `/compact` | Compact the conversation to free context window |
+| `/exit` | Exit TurboDev |
 | `/help` | Show available commands |
 | `/init` | Create or update `AGENTS.md` |
 | `/model` | Open model selector |
-| `/agent` | Open agent selector |
-| `/setup` | Re-run setup wizard |
-| `/clear` | Clear chat history |
-| `/compact` | Compact the conversation to free context window |
 | `/new` | Start a new session |
 | `/sessions` | List and switch between sessions |
-| `/exit` | Exit TurboDev |
+| `/setup` | Re-run setup wizard |
 
 ## Git Commands
 
 | Command | Description |
 |---------|-------------|
-| `/git status` | Show working tree status |
-| `/git log` | Show commit log (default 10 entries) |
-| `/git diff` | Show unstaged changes |
-| `/git add` | Stage files (default: all) |
-| `/git stash` | Stash changes |
-| `/git remote` | List remotes |
-| `/commit <msg>` | Stage all files and commit with message |
-| `/push` | Push current branch to remote |
-| `/pull` | Pull from remote |
 | `/branch` | List local branches |
 | `/branch <name>` | Switch to branch |
+| `/commit <msg>` | Stage all files and commit with message |
+| `/git add` | Stage files (default: all) |
+| `/git diff` | Show unstaged changes |
+| `/git log` | Show commit log (default 10 entries) |
+| `/git remote` | List remotes |
+| `/git stash` | Stash changes |
+| `/git status` | Show working tree status |
+| `/pull` | Pull from remote |
+| `/push` | Push current branch to remote |
 | `/rollback` | Show recent commits for rollback |
 
 ## GitHub Commands
 
 | Command | Description |
 |---------|-------------|
-| `/pr list` | List open pull requests |
-| `/pr <title>` | Create a pull request with title |
 | `/gh auth` | Launch GitHub authentication wizard |
+| `/pr <title>` | Create a pull request with title |
+| `/pr list` | List open pull requests |
 
 ## Command Details
 

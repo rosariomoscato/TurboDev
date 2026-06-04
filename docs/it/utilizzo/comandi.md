@@ -8,41 +8,41 @@ Tutti i comandi iniziano con `/`. Digita `/` nella barra di input per aprire la 
 
 | Comando | Descrizione |
 |---------|-------------|
+| `/agent` | Apre il selettore degli agenti |
+| `/clear` | Cancella la cronologia della chat |
+| `/compact` | Compatta la conversazione per liberare spazio nel contesto |
+| `/exit` | Esci da TurboDev |
 | `/help` | Mostra i comandi disponibili |
 | `/init` | Crea o aggiorna `AGENTS.md` |
 | `/model` | Apre il selettore dei modelli |
-| `/agent` | Apre il selettore degli agenti |
-| `/setup` | Esegue di nuovo la procedura guidata |
-| `/clear` | Cancella la cronologia della chat |
-| `/compact` | Compatta la conversazione per liberare spazio nel contesto |
 | `/new` | Inizia una nuova sessione |
 | `/sessions` | Elenca e passa da una sessione all'altra |
-| `/exit` | Esci da TurboDev |
+| `/setup` | Esegue di nuovo la procedura guidata |
 
 ## Comandi Git
 
 | Comando | Descrizione |
 |---------|-------------|
-| `/git status` | Mostra lo stato dell'albero di lavoro |
-| `/git log` | Mostra il log dei commit (10 per impostazione predefinita) |
-| `/git diff` | Mostra le modifiche non in staging |
-| `/git add` | Aggiunge file allo staging (tutti per impostazione predefinita) |
-| `/git stash` | Salva le modifiche in stash |
-| `/git remote` | Elenca i remote |
-| `/commit <msg>` | Aggiunge tutto allo staging e fa commit con il messaggio |
-| `/push` | Effettua push del branch corrente sul remote |
-| `/pull` | Effettua pull dal remote |
 | `/branch` | Elenca i branch locali |
 | `/branch <name>` | Passa al branch specificato |
+| `/commit <msg>` | Aggiunge tutto allo staging e fa commit con il messaggio |
+| `/git add` | Aggiunge file allo staging (tutti per impostazione predefinita) |
+| `/git diff` | Mostra le modifiche non in staging |
+| `/git log` | Mostra il log dei commit (10 per impostazione predefinita) |
+| `/git remote` | Elenca i remote |
+| `/git stash` | Salva le modifiche in stash |
+| `/git status` | Mostra lo stato dell'albero di lavoro |
+| `/pull` | Effettua pull dal remote |
+| `/push` | Effettua push del branch corrente sul remote |
 | `/rollback` | Mostra i commit recenti per il rollback |
 
 ## Comandi GitHub
 
 | Comando | Descrizione |
 |---------|-------------|
-| `/pr list` | Elenca le pull request aperte |
-| `/pr <titolo>` | Crea una pull request con il titolo specificato |
 | `/gh auth` | Avvia la procedura guidata di autenticazione GitHub |
+| `/pr <titolo>` | Crea una pull request con il titolo specificato |
+| `/pr list` | Elenca le pull request aperte |
 
 ## Dettagli dei comandi
 

@@ -8,16 +8,16 @@ Agents have access to a set of tools for interacting with your codebase. Tool av
 
 | Tool | Description |
 |------|-------------|
-| `read_file` | Read file contents |
-| `edit_file` | Create or edit files |
-| `list_files` | List directory contents |
-| `mkdir` | Create directories |
-| `grep` | Search file contents with regex |
 | `bash` | Execute shell commands |
-| `question` | Ask the user a question |
-| `task` | Invoke a subagent |
+| `edit_file` | Create or edit files |
 | `git` | Execute Git operations |
 | `github` | Execute GitHub operations |
+| `grep` | Search file contents with regex |
+| `list_files` | List directory contents |
+| `mkdir` | Create directories |
+| `question` | Ask the user a question |
+| `read_file` | Read file contents |
+| `task` | Invoke a subagent |
 
 ## read_file
 

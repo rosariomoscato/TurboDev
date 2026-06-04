@@ -8,16 +8,16 @@ Gli agenti hanno accesso a un insieme di strumenti per interagire con il tuo cod
 
 | Strumento | Descrizione |
 |-----------|-------------|
-| `read_file` | Legge il contenuto di un file |
-| `edit_file` | Crea o modifica file |
-| `list_files` | Elenca il contenuto di una directory |
-| `mkdir` | Crea directory |
-| `grep` | Cerca nel contenuto dei file con regex |
 | `bash` | Esegue comandi shell |
-| `question` | Pone una domanda all'utente |
-| `task` | Invoca un sottoagente |
+| `edit_file` | Crea o modifica file |
 | `git` | Esegue operazioni Git |
 | `github` | Esegue operazioni GitHub |
+| `grep` | Cerca nel contenuto dei file con regex |
+| `list_files` | Elenca il contenuto di una directory |
+| `mkdir` | Crea directory |
+| `question` | Pone una domanda all'utente |
+| `read_file` | Legge il contenuto di un file |
+| `task` | Invoca un sottoagente |
 
 ## read_file
 

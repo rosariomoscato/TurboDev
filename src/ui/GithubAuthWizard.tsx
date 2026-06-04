@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Text, Newline, useApp, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import Spinner from 'ink-spinner';
-import { spawn } from 'node:child_process';
 import { checkGhAuth } from '../tools/github.js';
 
 type WizardStep =
@@ -35,7 +34,6 @@ export default function GithubAuthWizard({ onComplete }: Props) {
   const [tokenInput, setTokenInput] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [methodChoice, setMethodChoice] = useState<number>(0);
-  const [browserProcessRunning, setBrowserProcessRunning] = useState(false);
 
   // --- Step 1: Check gh auth status on mount ---
   useEffect(() => {
@@ -100,39 +98,10 @@ export default function GithubAuthWizard({ onComplete }: Props) {
     }
   }, []);
 
-  // --- Run browser-based login (gh auth login -w) ---
+  // --- Browser login: Ink cannot run interactive gh auth, so show instructions ---
   const startBrowserLogin = useCallback(() => {
     setStep('browser_login');
-    setBrowserProcessRunning(true);
-
-    const child = spawn('gh', [
-      'auth',
-      'login',
-      '-p',
-      'https',
-      '-w',
-      '-h',
-      'github.com',
-    ], { stdio: 'inherit' });
-
-    child.on('close', (code) => {
-      setBrowserProcessRunning(false);
-      if (code === 0) {
-        verifyAuth();
-      } else {
-        setStep('error');
-        setErrorMessage(
-          `gh auth login exited with code ${code}. Please try again.`,
-        );
-      }
-    });
-
-    child.on('error', (err) => {
-      setBrowserProcessRunning(false);
-      setStep('error');
-      setErrorMessage(`Failed to start gh auth login: ${err.message}`);
-    });
-  }, [verifyAuth]);
+  }, []);
 
   // --- Run token-based login (pipe token to gh auth login --with-token) ---
   const startTokenLogin = useCallback(
@@ -235,7 +204,7 @@ export default function GithubAuthWizard({ onComplete }: Props) {
 
     // Browser login in progress — Esc cancels back to method choice
     if (step === 'browser_login') {
-      if (key.escape) {
+      if (key.return || key.escape) {
         setStep('choose_method');
       }
       return;
@@ -305,21 +274,18 @@ export default function GithubAuthWizard({ onComplete }: Props) {
   if (step === 'browser_login') {
     return (
       <Box flexDirection="column">
-        <Text color="cyan" bold>
-          GitHub Authentication — Browser Login
+        <Text color="yellow" bold>
+          Browser login is not available inside TurboDev
         </Text>
         <Newline />
-        {browserProcessRunning ? (
-          <Box>
-            <Text color="yellow">
-              <Spinner type="dots" /> Follow instructions in your browser...
-            </Text>
-          </Box>
-        ) : (
-          <Text color="yellow">Verifying authentication...</Text>
-        )}
+        <Text>To authenticate with your browser:</Text>
         <Newline />
-        <Text color="gray">Press Esc to cancel</Text>
+        <Text color="cyan">  1. Exit TurboDev (type /exit)</Text>
+        <Text color="cyan">  2. Run: gh auth login</Text>
+        <Text color="cyan">  3. Follow the instructions in your browser</Text>
+        <Text color="cyan">  4. Relaunch TurboDev</Text>
+        <Newline />
+        <Text color="gray">Press Enter to go back</Text>
       </Box>
     );
   }

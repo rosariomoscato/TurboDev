@@ -71,41 +71,41 @@ Type `/` to open the command palette, or type commands directly:
 
 | Command | Description |
 |---------|-------------|
+| `/agent` | Switch agent |
+| `/clear` | Clear chat history |
+| `/compact` | Compact conversation to free context window |
+| `/exit` | Exit TurboDev |
 | `/help` | Show available commands |
 | `/init` | Generate AGENTS.md with interactive wizard |
 | `/model` | Select AI model |
-| `/agent` | Switch agent |
-| `/setup` | Re-run setup wizard |
-| `/clear` | Clear chat history |
-| `/compact` | Compact conversation to free context window |
 | `/new` | Start a new session |
 | `/sessions` | List and switch between sessions |
-| `/exit` | Exit TurboDev |
+| `/setup` | Re-run setup wizard |
 
 ### Git commands
 
 | Command | Description |
 |---------|-------------|
-| `/git status` | Show working tree status |
-| `/git log` | Show commit log |
-| `/git diff` | Show unstaged changes |
-| `/git add` | Stage files (default: all) |
-| `/git stash` | Stash changes |
-| `/git remote` | List remotes |
-| `/commit <msg>` | Stage all and commit |
-| `/push` | Push to remote |
-| `/pull` | Pull from remote |
 | `/branch` | List branches |
 | `/branch <name>` | Switch branch |
+| `/commit <msg>` | Stage all and commit |
+| `/git add` | Stage files (default: all) |
+| `/git diff` | Show unstaged changes |
+| `/git log` | Show commit log |
+| `/git remote` | List remotes |
+| `/git stash` | Stash changes |
+| `/git status` | Show working tree status |
+| `/pull` | Pull from remote |
+| `/push` | Push to remote |
 | `/rollback` | Show recent commits to revert |
 
 ### GitHub commands
 
 | Command | Description |
 |---------|-------------|
-| `/pr list` | List pull requests |
-| `/pr <title>` | Create a pull request |
 | `/gh auth` | GitHub authentication wizard |
+| `/pr <title>` | Create a pull request |
+| `/pr list` | List pull requests |
 
 ### Keyboard shortcuts
 
@@ -120,16 +120,16 @@ Type `/` to open the command palette, or type commands directly:
 
 | Tool | Description |
 |------|-------------|
-| `read_file` | Read the contents of a file |
-| `list_files` | List files in a directory |
-| `edit_file` | Create or edit a file |
-| `mkdir` | Create directories |
-| `grep` | Search file contents with regex (uses ripgrep if available) |
 | `bash` | Execute shell commands with timeout |
-| `question` | Ask the user for clarification |
-| `task` | Invoke a subagent for specialized tasks |
+| `edit_file` | Create or edit a file |
 | `git` | Execute Git operations (status, log, diff, add, commit, push, pull, branch, stash, remote, and more) |
 | `github` | Execute GitHub operations (create PR, list PRs, create issue, list issues, create release, and more) |
+| `grep` | Search file contents with regex (uses ripgrep if available) |
+| `list_files` | List files in a directory |
+| `mkdir` | Create directories |
+| `question` | Ask the user for clarification |
+| `read_file` | Read the contents of a file |
+| `task` | Invoke a subagent for specialized tasks |
 
 ## Configuration
 
