@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, useApp, useInput, Text, Static } from 'ink';
+import path from 'node:path';
 import { loadConfig, saveConfig } from '../config/store.js';
 import { runAgent } from '../agent/loop.js';
 import { ChatMessage } from '../llm/client.js';
@@ -20,13 +21,16 @@ import { compactConversation } from '../agent/compaction.js';
 import { generateSystemPrompt } from '../agent/system-prompt.js';
 import { estimateTokens } from '../llm/tokens.js';
 import { getContextLength } from '../llm/models.js';
-import { saveSession, loadSession, listSessions, getLatestSession, generateSessionId, generateTitle, deleteSession } from '../session/store.js';
+import { saveSession, loadSession, listSessions, getLatestSession, generateSessionId, generateTitle, deleteSession, getAnsweredSessionId, setAnsweredSessionId } from '../session/store.js';
 import type { Session } from '../session/types.js';
 import { version } from '../../package.json';
 import { gitTool } from '../tools/git.js';
 import { githubTool } from '../tools/github.js';
 import GithubAuthWizard from './GithubAuthWizard.js';
 import { saveGithubAuthState } from '../config/store.js';
+import { listFilesTool } from '../tools/list-files.js';
+import { readFileTool } from '../tools/read-file.js';
+import fsPromises from 'fs/promises';
 
 const gitHash = typeof __GIT_HASH__ !== 'undefined' ? __GIT_HASH__ : 'dev';
 const versionString = `v${version}${gitHash !== 'dev' ? ` (${gitHash})` : ''}`;
@@ -64,6 +68,12 @@ const PALETTE_COMMANDS: PaletteCommand[] = [
   { label: '/sessions', value: '/sessions', description: 'List and switch sessions' },
   { label: '/setup', value: '/setup', description: 'Re-run setup wizard' },
 ].sort((a, b) => a.label.localeCompare(b.label));
+
+interface RefItem {
+  label: string;
+  value: string;
+  type: 'agent' | 'file' | 'dir';
+}
 
 function mapAgentColor(color?: string): string {
   const colorMap: Record<string, string> = {
@@ -156,6 +166,11 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState(0);
   const modelsPerPage = 9;
 
+  const [showRefSelector, setShowRefSelector] = useState(false);
+  const [refItems, setRefItems] = useState<RefItem[]>([]);
+  const [refIndex, setRefIndex] = useState(0);
+  const [refFilter, setRefFilter] = useState('');
+
   const [pendingQuestion, setPendingQuestion] = useState<{
     question: string;
     options?: string[];
@@ -177,6 +192,7 @@ export default function App() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamingBufferRef = useRef('');
   const streamingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionInitRef = useRef(false);
 
   useEffect(() => {
     if (showSessionPrompt) return;
@@ -215,10 +231,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (sessionInitRef.current) return;
+    sessionInitRef.current = true;
     const latest = getLatestSession(process.cwd());
     if (latest) {
-      setPendingSession(latest);
-      setShowSessionPrompt(true);
+      const answeredId = getAnsweredSessionId(process.cwd());
+      if (answeredId === latest.id) {
+        setSessionId(generateSessionId());
+        setSessionCreatedAt(new Date().toISOString());
+        const sysPrompt = generateSystemPrompt(agentsContext ?? undefined, currentAgent);
+        setTokenCount(estimateTokens(sysPrompt));
+        setContextLength(getContextLength(currentAgent.model || config.model));
+      } else {
+        setPendingSession(latest);
+        setShowSessionPrompt(true);
+      }
     } else {
       setSessionId(generateSessionId());
       setSessionCreatedAt(new Date().toISOString());
@@ -309,16 +336,77 @@ export default function App() {
 
   const isInputMode = showModelSelector || showAgentSelector || showSessionSelector || showCommandPalette;
 
+  const cachedFilesRef = useRef<RefItem[] | null>(null);
+
+  const loadRefItems = useCallback(async (query: string) => {
+    if (!cachedFilesRef.current) {
+      const files: RefItem[] = [];
+      try {
+        const result = await listFilesTool({ path: process.cwd(), recursive: true });
+        for (const file of result.files) {
+          files.push({
+            label: file.type === 'dir' ? `[Dir] ${file.filename}/` : `[File] ${file.filename}`,
+            value: file.filename,
+            type: file.type,
+          });
+        }
+      } catch {}
+      cachedFilesRef.current = files;
+    }
+
+    const q = query.toLowerCase();
+    const items: RefItem[] = [];
+
+    const agents = allAgents.filter(a => a.mode !== 'subagent' && !a.hidden);
+    for (const agent of agents) {
+      if (agent.name.toLowerCase().includes(q)) {
+        items.push({ label: `[Agent] ${agent.name}`, value: agent.name, type: 'agent' });
+      }
+    }
+
+    for (const item of cachedFilesRef.current) {
+      if (item.value.toLowerCase().includes(q)) {
+        items.push(item);
+      }
+    }
+
+    setRefItems(items);
+    setRefIndex(0);
+  }, [allAgents]);
+
+  const handleReference = useCallback((query: string | null) => {
+    if (query === null) {
+      setShowRefSelector(false);
+      setRefItems([]);
+      setRefFilter('');
+      return;
+    }
+    setRefFilter(query);
+    setShowRefSelector(true);
+    loadRefItems(query);
+  }, [loadRefItems]);
+
+  const handleRefSelect = useCallback((item: RefItem) => {
+    setInputPrefill(`@${item.value} `);
+    setInputKey((k) => k + 1);
+    setShowRefSelector(false);
+    setRefItems([]);
+    setRefFilter('');
+    cachedFilesRef.current = null;
+  }, []);
+
   useInput((input, key) => {
     if (showSessionPrompt) {
       const answer = input.toLowerCase();
       const sessionToHandle = pendingSession;
       if (answer === 'y' || answer === 's') {
+        setAnsweredSessionId(process.cwd(), sessionToHandle?.id || '');
         setShowSessionPrompt(false);
         setShowBanner(false);
         setPendingSession(null);
         if (sessionToHandle) restoreSession(sessionToHandle);
       } else if (answer === 'n') {
+        setAnsweredSessionId(process.cwd(), sessionToHandle?.id || '');
         setShowSessionPrompt(false);
         setShowBanner(false);
         setPendingSession(null);
@@ -332,6 +420,28 @@ export default function App() {
         return;
       }
       return;
+    }
+
+    if (showRefSelector && refItems.length > 0) {
+      if (key.escape) {
+        setShowRefSelector(false);
+        setRefItems([]);
+        setRefFilter('');
+        return;
+      }
+      if (key.upArrow) {
+        setRefIndex(prev => (prev - 1 + refItems.length) % refItems.length);
+        return;
+      }
+      if (key.downArrow) {
+        setRefIndex(prev => (prev + 1) % refItems.length);
+        return;
+      }
+      if (key.return) {
+        const selected = refItems[refIndex];
+        if (selected) handleRefSelect(selected);
+        return;
+      }
     }
 
     if (key.escape && status && abortControllerRef.current) {
@@ -640,6 +750,7 @@ export default function App() {
             '  /gh auth        GitHub authentication wizard',
             '',
             'Tab: switch agent',
+            '@path: reference files/folders (e.g. @src/App.tsx)',
           ].join('\n')
         }]);
         return;
@@ -1159,11 +1270,43 @@ export default function App() {
       }
     }
 
+    const atRefs = input.match(/@[^\s]+/g);
+    let enrichedInput = input;
+    let refContext = '';
+
+    if (atRefs) {
+      for (const ref of atRefs) {
+        const refPath = ref.slice(1);
+        const agentByName = allAgents.find(a => a.name === refPath && a.mode !== 'subagent' && !a.hidden);
+        if (agentByName) continue;
+
+          const fullPath = path.resolve(process.cwd(), refPath);
+
+        try {
+          const stat = await fsPromises.stat(fullPath);
+          if (stat.isFile()) {
+            const result = await readFileTool({ filename: refPath });
+            refContext += `\n--- @${refPath} ---\n${result.content}\n--- end @${refPath} ---\n`;
+          } else if (stat.isDirectory()) {
+            const result = await listFilesTool({ path: refPath, recursive: true });
+            const fileList = result.files.map(f =>
+              f.type === 'dir' ? `${f.filename}/` : f.filename
+            );
+            refContext += `\n--- @${refPath}/ (directory listing) ---\n${fileList.join('\n')}\n--- end @${refPath}/ ---\n`;
+          }
+        } catch {}
+      }
+
+      if (refContext) {
+        enrichedInput = `${input}\n\n[Referenced files]\n${refContext}`;
+      }
+    }
+
     setMessages(prev => [...prev, { role: 'user', content: input }]);
     setStatus('AI thinking...');
     setThinkingStart(Date.now());
 
-    const { result, finalContent } = await runAgentWithAgent(input, currentAgent, conversationHistory);
+    const { result, finalContent } = await runAgentWithAgent(enrichedInput, currentAgent, conversationHistory);
 
     setTokenCount(result.tokenCount);
     setContextLength(result.contextLength);
@@ -1188,11 +1331,16 @@ export default function App() {
     setThinkingStart(0);
   };
 
-  const activeOnSubmit = pendingPermission
-    ? handlePermissionAnswer
-    : pendingQuestion
-    ? handleQuestionAnswer
-    : handleUserInput;
+  const activeOnSubmit = (input: string) => {
+    if (showRefSelector) return;
+    if (pendingPermission) {
+      handlePermissionAnswer(input);
+    } else if (pendingQuestion) {
+      handleQuestionAnswer(input);
+    } else {
+      handleUserInput(input);
+    }
+  };
 
   if (showInitWizard) {
     return (
@@ -1366,6 +1514,22 @@ export default function App() {
             <Text color="gray">↑/↓ navigate · Enter select · Esc cancel</Text>
           </Box>
         )}
+        {showRefSelector && refItems.length > 0 && (
+          <Box flexDirection="column" alignItems="flex-start" marginY={1}>
+            <Text color="cyan" bold>Reference (@)</Text>
+            {refItems.slice(0, 20).map((item, i) => (
+              <Box key={item.value + item.type}>
+                <Text color={i === refIndex ? 'green' : 'gray'}>
+                  {i === refIndex ? '> ' : '  '}{item.label}
+                </Text>
+              </Box>
+            ))}
+            {refItems.length > 10 && (
+              <Text color="gray">  ... and {refItems.length - 20} more — type to filter</Text>
+            )}
+            <Text color="gray">↑/↓ navigate · Enter select · Esc cancel</Text>
+          </Box>
+        )}
       </Box>
       {!isInputMode && !showSessionPrompt && (!status || pendingPermission || pendingQuestion) && (
         <Box flexDirection="column">
@@ -1390,6 +1554,7 @@ export default function App() {
             key={inputKey}
             onSubmit={activeOnSubmit}
             onSlash={() => { setPaletteIndex(0); setShowCommandPalette(true); }}
+            onReference={handleReference}
             agentName={currentAgent.name}
             initialValue={inputPrefill}
           />

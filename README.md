@@ -22,6 +22,7 @@ TurboDev is an AI coding agent that runs entirely in the terminal. It lets you c
 - **Git integration** — 26 Git operations via simple-git, accessible through slash commands and AI tools
 - **GitHub integration** — 15 GitHub operations via `gh` CLI, including PR management and authentication wizard
 - **Command palette** — type `/` to browse all commands alphabetically with arrow key navigation
+- **@ file/folder referencing** — type `@` to reference files or folders in your message; the content is included as context for the AI
 - **Session persistence** — conversations are saved automatically and can be resumed across restarts
 - **Context window management** — real-time token tracking (`0.56K/128K`), auto-compaction at 85%, manual `/compact`
 - **Real-time cost tracking** — see how much you're spending per session based on OpenRouter pricing
@@ -115,6 +116,7 @@ Type `/` to open the command palette, or type commands directly:
 | `Tab` | Switch between agents |
 | `Escape` | Cancel action / Interrupt AI request |
 | `@agentname` | Invoke an agent directly |
+| `@path` | Reference a file or folder (e.g. `@src/App.tsx`) |
 
 ### Available tools
 
