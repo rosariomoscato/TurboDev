@@ -26,6 +26,7 @@ TurboDev is an AI coding agent that runs entirely in the terminal. It lets you c
 - **Session persistence** — conversations are saved automatically and can be resumed across restarts
 - **Context window management** — real-time token tracking (`0.56K/128K`), auto-compaction at 85%, manual `/compact`
 - **Real-time cost tracking** — see how much you're spending per session based on OpenRouter pricing
+- **Agent Skills** — extend agent capabilities with installable skill packs (`.agents/skills/`), following the open [Agent Skills](https://agentskills.io) specification
 - **Request interruption** — press Escape to cancel a running AI request at any time
 - **AGENTS.md support** — project context and instructions loaded automatically from the open standard
 - **/init wizard** — generate an AGENTS.md file interactively with auto-detection of project type
@@ -82,6 +83,7 @@ Type `/` to open the command palette, or type commands directly:
 | `/new` | Start a new session |
 | `/sessions` | List and switch between sessions |
 | `/setup` | Re-run setup wizard |
+| `/skills` | List discovered agent skills |
 
 ### Git commands
 
@@ -131,6 +133,7 @@ Type `/` to open the command palette, or type commands directly:
 | `mkdir` | Create directories |
 | `question` | Ask the user for clarification |
 | `read_file` | Read the contents of a file |
+| `load_skill` | Load skill instructions or resource files |
 | `task` | Invoke a subagent for specialized tasks |
 
 ## Configuration
