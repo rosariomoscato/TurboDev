@@ -17,6 +17,7 @@ Gli agenti hanno accesso a un insieme di strumenti per interagire con il tuo cod
 | `mkdir` | Crea directory |
 | `question` | Pone una domanda all'utente |
 | `read_file` | Legge il contenuto di un file |
+| `load_skill` | Carica istruzioni di skill o file di risorsa |
 | `task` | Invoca un sottoagente |
 
 ## read_file
@@ -88,6 +89,23 @@ Pone una domanda all'utente e attende la risposta.
 ```
 question({ "question": "Quale framework?", "options": ["react", "vue"] })
 ```
+
+## load_skill
+
+Carica le istruzioni complete o un file di risorsa specifico da una agent skill. L'LLM lo chiama automaticamente quando determina che una skill è rilevante per il compito corrente.
+
+**Argomenti**: `{ name: string, resource?: string }`
+
+```
+load_skill({ "name": "react-component" })
+load_skill({ "name": "react-component", "resource": "references/patterns.md" })
+```
+
+Quando `resource` è omesso, restituisce le istruzioni complete del SKILL.md. Quando fornito, restituisce il contenuto del file specificato nella directory della skill.
+
+::: tip
+Questo strumento è sempre abilitato e non può essere disabilitato per agente. L'LLM ha accesso solo ai metadati della skill nel prompt di sistema finché non chiama `load_skill`.
+:::
 
 ## task
 

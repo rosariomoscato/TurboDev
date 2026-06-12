@@ -17,6 +17,7 @@ Agents have access to a set of tools for interacting with your codebase. Tool av
 | `mkdir` | Create directories |
 | `question` | Ask the user a question |
 | `read_file` | Read file contents |
+| `load_skill` | Load skill instructions or resource files |
 | `task` | Invoke a subagent |
 
 ## read_file
@@ -88,6 +89,23 @@ Ask the user a question and wait for their response.
 ```
 question({ "question": "Which framework?", "options": ["react", "vue"] })
 ```
+
+## load_skill
+
+Load full instructions or a specific resource file from an agent skill. The LLM calls this automatically when it determines a skill is relevant to the current task.
+
+**Args**: `{ name: string, resource?: string }`
+
+```
+load_skill({ "name": "react-component" })
+load_skill({ "name": "react-component", "resource": "references/patterns.md" })
+```
+
+When `resource` is omitted, returns the full SKILL.md instructions. When provided, returns the content of the specified file within the skill directory.
+
+::: tip
+This tool is always enabled and cannot be disabled per-agent. The LLM only has access to skill metadata in the system prompt until it calls `load_skill`.
+:::
 
 ## task
 

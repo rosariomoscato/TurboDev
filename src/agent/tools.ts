@@ -9,8 +9,9 @@ import { gitTool, GitArgs } from '../tools/git.js';
 import { githubTool, GithubArgs } from '../tools/github.js';
 import type { AgentConfig } from './types.js';
 import { resolveToolPermission } from './permissions.js';
+import type { LoadSkillArgs, Skill } from '../skills/types.js';
 
-export type ToolName = 'read_file' | 'list_files' | 'edit_file' | 'mkdir' | 'grep' | 'bash' | 'question' | 'git' | 'github' | 'task';
+export type ToolName = 'read_file' | 'list_files' | 'edit_file' | 'mkdir' | 'grep' | 'bash' | 'question' | 'git' | 'github' | 'task' | 'load_skill';
 
 export type ToolArgs =
   | ReadFileArgs
@@ -21,7 +22,8 @@ export type ToolArgs =
   | BashArgs
   | QuestionArgs
   | GitArgs
-  | GithubArgs;
+  | GithubArgs
+  | LoadSkillArgs;
 
 export interface ToolDefinition {
   name: ToolName;
@@ -159,11 +161,27 @@ Returns: { success: boolean, operation: string, data?: any, error?: string }`,
     name: 'task',
     description: 'Invoke a subagent for a specialized task.\nArgs: { agent: string, prompt: string, description: string }\nReturns: { result: string, agent: string }',
     fn: async () => ({ result: 'Task tool not configured', agent: 'unknown' })
+  },
+  load_skill: {
+    name: 'load_skill',
+    description: `Load a skill's specialized instructions and optionally a resource file.
+    Args: { name: string, resource?: string }
+      - name: The skill name to load
+      - resource: Optional relative path to a file within the skill directory (e.g. "scripts/setup.sh", "references/guide.md")
+    Returns: { success: boolean, name: string, instructions?: string, resource?: string, resourceContent?: string, error?: string }`.trim(),
+    fn: async () => ({ success: false, name: '', error: 'load_skill tool not configured' })
   }
 };
 
 export function registerTaskTool(fn: (args: any) => Promise<any>): void {
   TOOL_REGISTRY.task.fn = fn;
+}
+
+export function registerLoadSkillTool(skills: Skill[]): void {
+  TOOL_REGISTRY.load_skill.fn = async (args: LoadSkillArgs) => {
+    const { loadSkillTool } = await import('../skills/tool.js');
+    return loadSkillTool(args, skills);
+  };
 }
 
 export async function executeToolCall(call: ToolCall, context?: ToolCallContext): Promise<ToolResult> {

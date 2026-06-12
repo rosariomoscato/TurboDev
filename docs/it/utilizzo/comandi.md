@@ -18,6 +18,7 @@ Tutti i comandi iniziano con `/`. Digita `/` nella barra di input per aprire la 
 | `/new` | Inizia una nuova sessione |
 | `/sessions` | Elenca e passa da una sessione all'altra |
 | `/setup` | Esegue di nuovo la procedura guidata |
+| `/skills` | Elenca le agent skill scoperte |
 
 ## Comandi Git
 
@@ -142,6 +143,16 @@ Avvia la procedura guidata di autenticazione GitHub. Supporta il login via brows
 ```
 /gh auth
 ```
+
+### /skills
+
+Elenca tutte le agent skill scoperte con stato, fonte e descrizione.
+
+```
+/skills
+```
+
+Mostra il nome di ogni skill, se è abilitata o disabilitata, dove è stata trovata (builtin, globale o progetto) e la sua descrizione. Le skill vengono caricate da tre fonti in ordine di priorità: progetto (`.agents/skills/`) > globale (`~/.config/turbodev/skills/`) > builtin.
 
 ### /exit
 

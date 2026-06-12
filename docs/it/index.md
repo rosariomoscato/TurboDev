@@ -16,6 +16,7 @@ Inizia a usare TurboDev.
 - **Gestione della finestra di contesto** — Tracciamento token in tempo reale, auto-compattazione e `/compact` manuale
 - **Tracciamento costi in tempo reale** — Visualizza la spesa nella barra di stato
 - **Interruzione delle richieste** — Premi Escape per cancellare una richiesta AI in corso
+- **Agent Skills** — Estendi le capacità degli agenti con skill pack installabili (`.agents/skills/`)
 
 ## Prerequisiti
 
@@ -45,4 +46,5 @@ Al primo avvio, la procedura guidata ti chiederà la chiave API OpenRouter e il 
 - [Configura il tuo ambiente](/it/configurazione/)
 - [Scopri i comandi](/it/utilizzo/comandi)
 - [Esplora il sistema degli agenti](/it/agenti/)
+- [Agent Skills](/it/configurazione/skills)
 - [Personalizza i permessi](/it/agenti/permessi)

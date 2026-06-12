@@ -18,6 +18,7 @@ All commands start with `/`. Type `/` in the input bar to open the command palet
 | `/new` | Start a new session |
 | `/sessions` | List and switch between sessions |
 | `/setup` | Re-run setup wizard |
+| `/skills` | List discovered agent skills |
 
 ## Git Commands
 
@@ -142,6 +143,16 @@ Launches the GitHub authentication wizard. Supports browser-based login or perso
 ```
 /gh auth
 ```
+
+### /skills
+
+Lists all discovered agent skills with their status, source, and description.
+
+```
+/skills
+```
+
+Shows each skill's name, whether it's enabled or disabled, where it was found (builtin, global, or project), and its description. Skills are loaded from three sources in priority order: project (`.agents/skills/`) > global (`~/.config/turbodev/skills/`) > builtin.
 
 ### /exit
 

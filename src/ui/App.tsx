@@ -8,8 +8,10 @@ import { fetchAvailableModels, getModelPricing } from '../llm/models.js';
 import { loadAgentsMd } from '../context/agents-md.js';
 import { loadAllAgents } from '../agent/registry.js';
 import { createTaskTool } from '../tools/task.js';
-import { registerTaskTool } from '../agent/tools.js';
+import { registerTaskTool, registerLoadSkillTool } from '../agent/tools.js';
 import type { AgentConfig } from '../agent/types.js';
+import { loadAllSkills } from '../skills/registry.js';
+import type { Skill } from '../skills/types.js';
 import SetupWizard from './SetupWizard.js';
 import InitWizard from './InitWizard.js';
 import ChatView from './ChatView.js';
@@ -66,6 +68,7 @@ const PALETTE_COMMANDS: PaletteCommand[] = [
   { label: '/push', value: '/push', description: 'Push to remote' },
   { label: '/rollback', value: '/rollback', description: 'Show recent commits' },
   { label: '/sessions', value: '/sessions', description: 'List and switch sessions' },
+  { label: '/skills', value: '/skills', description: 'List available skills' },
   { label: '/setup', value: '/setup', description: 'Re-run setup wizard' },
 ].sort((a, b) => a.label.localeCompare(b.label));
 
@@ -137,6 +140,7 @@ export default function App() {
   const [showGithubAuth, setShowGithubAuth] = useState(false);
 
   const [allAgents] = useState<AgentConfig[]>(() => loadAllAgents(process.cwd()));
+  const [allSkills] = useState<Skill[]>(() => loadAllSkills(process.cwd()));
   const [primaryAgents] = useState<AgentConfig[]>(() => allAgents.filter(a => a.mode !== 'subagent' && !a.hidden));
   const [currentAgentIndex, setCurrentAgentIndex] = useState(0);
   const [currentAgent, setCurrentAgent] = useState<AgentConfig>(() => allAgents.filter(a => a.mode !== 'subagent' && !a.hidden)[0]);
@@ -224,6 +228,7 @@ export default function App() {
 
   useEffect(() => {
     registerTaskTool(createTaskTool(process.cwd(), currentAgent, runAgent));
+    registerLoadSkillTool(allSkills);
   }, []);
 
   useEffect(() => {
@@ -579,6 +584,13 @@ export default function App() {
             }, 600);
           }
         } else if (chunk.type === 'tool_call') {
+          const skillMatch = chunk.text.match(/tool: load_skill\(\{"name":\s*"([^"]+)"\)/);
+          if (skillMatch) {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `[skill: ${skillMatch[1]}]`
+            }]);
+          }
           finalContent = '';
           streamingBufferRef.current = '';
           if (streamingTimerRef.current) {
@@ -589,7 +601,8 @@ export default function App() {
         }
       },
       { onQuestion: handleQuestion, onPermissionAsk: handlePermissionAsk },
-      controller.signal
+      controller.signal,
+      allSkills
     );
 
     abortControllerRef.current = null;
@@ -856,6 +869,30 @@ export default function App() {
         const sessions = listSessions(process.cwd());
         setSessionList(sessions);
         setShowSessionSelector(true);
+        return;
+      }
+
+      if (command === 'skills') {
+        if (allSkills.length === 0) {
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: 'No skills available. Add skills to .agents/skills/ or ~/.config/turbodev/skills/'
+          }]);
+        } else {
+          const enabled = allSkills.filter(s => s.enabled);
+          const disabled = allSkills.filter(s => !s.enabled);
+          const truncate = (str: string, max: number) => str.length > max ? str.slice(0, max - 1) + '…' : str;
+          const lines = enabled.map(s =>
+            `  ${s.name.padEnd(28)} ${truncate(s.metadata.description, 70)}  [${s.source}]`
+          );
+          const disabledLines = disabled.length > 0
+            ? ['\nDisabled:', ...disabled.map(s => `  ${s.name}  [${s.source}]`)]
+            : [];
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: [`Skills (${enabled.length} enabled${disabled.length ? `, ${disabled.length} disabled` : ''}):`, ...lines, ...disabledLines].join('\n')
+          }]);
+        }
         return;
       }
 
@@ -1413,6 +1450,10 @@ export default function App() {
               <Box>
                 <Text color="gray">{' '}</Text>
                 <Text color={agentsContext ? 'green' : 'yellow'}>{agentsContext ? '● AGENTS.md' : '○ No AGENTS.md'}</Text>
+                <Text color="gray">{'  │  '}</Text>
+                <Text color={allSkills.filter(s => s.enabled).length > 0 ? 'green' : 'gray'}>
+                  {allSkills.filter(s => s.enabled).length > 0 ? `● ${allSkills.filter(s => s.enabled).length} skills` : '○ No skills'}
+                </Text>
                 <Text color="gray">{'  │  '}</Text>
                 <Text color="cyan">rosmoscato.xyz/turbodev</Text>
               </Box>

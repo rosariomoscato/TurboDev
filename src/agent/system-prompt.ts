@@ -1,7 +1,8 @@
 import { TOOL_REGISTRY } from './tools.js';
 import { AgentConfig } from './types.js';
+import type { Skill } from '../skills/types.js';
 
-export function generateSystemPrompt(projectContext?: string, agent?: AgentConfig): string {
+export function generateSystemPrompt(projectContext?: string, agent?: AgentConfig, skills?: Skill[]): string {
   const toolsToInclude = Object.values(TOOL_REGISTRY).filter(tool => {
     if (!agent?.tools) return true;
     if (agent.tools[tool.name] === false) return false;
@@ -14,12 +15,24 @@ export function generateSystemPrompt(projectContext?: string, agent?: AgentConfi
 
   const identitySuffix = agent ? ` You are currently acting as the "${agent.name}" agent.` : '';
 
+  // Build the optional skills section — only included when enabled skills exist.
+  let skillsSection = '';
+  if (skills && skills.length > 0) {
+    const enabledSkills = skills.filter(s => s.enabled);
+    if (enabledSkills.length > 0) {
+      const skillsList = enabledSkills
+        .map(s => `  - ${s.name}: ${s.metadata.description}`)
+        .join('\n');
+      skillsSection = `\nAVAILABLE SKILLS\n================\nThe following skills are available. Each skill contains specialized instructions for specific tasks.\n\n${skillsList}\n\nTo activate a skill and get its full instructions, call:\ntool: load_skill({"name": "skill-name"})\n\nYou can also load a specific resource file from a skill:\ntool: load_skill({"name": "skill-name", "resource": "references/guide.md"})\n\nOnly activate skills when they are relevant to the user's current task.\n`;
+    }
+  }
+
   let prompt = `${agent?.prompt ? agent.prompt + '\n\n' : ''}You are TurboDev, an AI coding assistant.${identitySuffix} You help users with coding tasks by reading, listing, and editing files in their project.
 
 You have access to the following tools:
 
 ${toolsStr}
-
+${skillsSection}
 IMPORTANT RULES:
 1. When you want to use a tool, respond with exactly one line in the format: tool: TOOL_NAME({JSON_ARGS}) and nothing else
 2. Use compact single-line JSON with double quotes

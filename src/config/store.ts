@@ -12,6 +12,9 @@ export interface TurboDevConfig {
   apiKey?: string;
   model?: string;
   githubAuth?: GithubAuthState;
+  skills?: {
+    disabled?: string[];
+  };
 }
 
 function getConfigPath(): string {

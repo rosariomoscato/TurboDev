@@ -1,5 +1,7 @@
 import { defineConfig } from 'tsup';
 import { execSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 function getGitHash(): string {
   try {
@@ -21,5 +23,12 @@ export default defineConfig({
   shims: false,
   define: {
     '__GIT_HASH__': JSON.stringify(getGitHash()),
+  },
+  async onSuccess() {
+    const src = path.resolve('src/skills/builtin');
+    const dest = path.resolve('dist/skills/builtin');
+    if (fs.existsSync(src)) {
+      fs.cpSync(src, dest, { recursive: true });
+    }
   },
 });

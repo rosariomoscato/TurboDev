@@ -7,6 +7,7 @@ import { ToolCallContext } from './tools.js';
 import { extractToolInvocations, formatToolResult } from './parser.js';
 import { generateSystemPrompt } from './system-prompt.js';
 import { AgentConfig } from './types.js';
+import type { Skill } from '../skills/types.js';
 
 export interface AgentCallbacks {
   onQuestion?: (question: string, options?: string[]) => Promise<string>;
@@ -39,9 +40,20 @@ export async function runAgent(
   agent: AgentConfig,
   onStream?: (chunk: AgentStreamChunk) => void,
   callbacks?: AgentCallbacks,
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
+  skills?: Skill[]
 ): Promise<AgentResult> {
-  const systemPrompt = generateSystemPrompt(projectContext ?? undefined, agent);
+  const filteredSkills = skills
+    ? agent.skills
+      ? skills.filter(s => agent.skills!.includes(s.name))
+      : skills
+    : undefined;
+
+  const systemPrompt = generateSystemPrompt(
+    projectContext ?? undefined,
+    agent,
+    filteredSkills
+  );
   let messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
     ...conversationHistory,

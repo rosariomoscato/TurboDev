@@ -16,6 +16,7 @@ Get started with TurboDev.
 - **Context Window Management** — Live token tracking, auto-compaction, and manual `/compact`
 - **Real-time Cost Tracking** — See how much you're spending in the status bar
 - **Request Interruption** — Press Escape to cancel a running AI request
+- **Agent Skills** — Extend agent capabilities with installable skill packs (`.agents/skills/`)
 
 ## Prerequisites
 
@@ -45,4 +46,5 @@ On first launch, the setup wizard will ask for your OpenRouter API key and prefe
 - [Configure your setup](/en/configuration/)
 - [Learn the commands](/en/usage/commands)
 - [Explore the agent system](/en/agents/)
+- [Agent Skills](/en/configuration/skills)
 - [Customize permissions](/en/agents/permissions)

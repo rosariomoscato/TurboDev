@@ -30,4 +30,5 @@ export interface AgentConfig {
   color?: string;
   hidden?: boolean;
   disable?: boolean;
+  skills?: string[];
 }
