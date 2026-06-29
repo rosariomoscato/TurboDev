@@ -27,6 +27,7 @@ TurboDev is an AI coding agent that runs entirely in the terminal. It lets you c
 - **Context window management** — real-time token tracking (`0.56K/128K`), auto-compaction at 85%, manual `/compact`
 - **Real-time cost tracking** — see how much you're spending per session based on OpenRouter pricing
 - **Agent Skills** — extend agent capabilities with installable skill packs (`.agents/skills/`), following the open [Agent Skills](https://agentskills.io) specification
+- **MCP support** — connect external tool servers via the [Model Context Protocol](https://modelcontextprotocol.io) (stdio transport, tools primitive)
 - **Request interruption** — press Escape to cancel a running AI request at any time
 - **AGENTS.md support** — project context and instructions loaded automatically from the open standard
 - **/init wizard** — generate an AGENTS.md file interactively with auto-detection of project type
@@ -84,6 +85,8 @@ Type `/` to open the command palette, or type commands directly:
 | `/sessions` | List and switch between sessions |
 | `/setup` | Re-run setup wizard |
 | `/skills` | List discovered agent skills |
+| `/mcp` | List MCP servers and tools |
+| `/mcp reload` | Re-read `.turbodev/mcp.json` and reconnect |
 
 ### Git commands
 
@@ -152,6 +155,32 @@ To use GitHub features, authenticate with:
 
 This opens an interactive wizard that supports browser-based login or personal access token. Requires the [GitHub CLI (`gh`)](https://cli.github.com/) to be installed.
 
+## MCP (Model Context Protocol)
+
+TurboDev supports connecting external tool servers via the [Model Context Protocol](https://modelcontextprotocol.io) (MCP). Servers are declared in `.turbodev/mcp.json` (Claude Desktop-compatible format):
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"]
+    }
+  }
+}
+```
+
+At startup TurboDev spawns each server via stdio, lists its tools, and registers them with prefixed names (`mcp__<server>__<tool>`) so the LLM can call them like native tools. Environment variables (`$VAR`, `${VAR}`) and `~` in the config are expanded.
+
+**Permissions**: MCP tools default to `ask` — the user approves the first call per server. Override per-server in agent Markdown:
+
+```yaml
+permission:
+  mcp: { filesystem: allow, github: ask }
+```
+
+Use `/mcp` to inspect server status and `/mcp reload` to reconnect after config changes. A growing list of MCP servers is available at [github.com/modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers).
+
 ## AGENTS.md
 
 TurboDev supports the open [AGENTS.md](https://agents.md/) standard — a markdown file that provides context and instructions to the AI agent. If present in the working directory, it is automatically loaded at startup and passed as project context.
@@ -168,7 +197,7 @@ Starting June 2026, we ship a new feature every week:
 | Week | Feature | Description |
 |------|---------|-------------|
 | Jun 11 | **Skills** | Installable skill packs that extend agent capabilities |
-| Jun 18 | **MCP** | Model Context Protocol support for external tool integration |
+| Jun 18 | **MCP** ✅ | Model Context Protocol support for external tool integration |
 | Jun 25 | **Persistent Memory** | Cross-session memory so the AI remembers your project context |
 | Jul 2 | **Economy Mode** | Budget-aware mode that optimizes token usage and model selection |
 | Jul 9 | **Ollama Connection** | Run local models via Ollama alongside OpenRouter |
