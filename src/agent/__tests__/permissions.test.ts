@@ -3,6 +3,7 @@ import {
   matchBashGlob,
   resolveBashPermission,
   resolveToolPermission,
+  parseMCPToolName,
 } from '../permissions.js';
 import type { AgentConfig } from '../types.js';
 
@@ -185,5 +186,74 @@ describe('resolveToolPermission', () => {
       permission: { edit: 'allow' },
     };
     expect(resolveToolPermission('edit_file', agent)).toBe('deny');
+  });
+});
+
+describe('resolveToolPermission — MCP', () => {
+  const baseAgent: AgentConfig = {
+    name: 'test',
+    description: '',
+    mode: 'primary',
+  };
+
+  it('returns ask for mcp__ tools when no permission config exists', () => {
+    expect(resolveToolPermission('mcp__fs__read', baseAgent)).toBe('ask');
+  });
+
+  it('returns the per-server entry when present', () => {
+    const agent: AgentConfig = {
+      ...baseAgent,
+      permission: { mcp: { fs: 'allow' } },
+    };
+    expect(resolveToolPermission('mcp__fs__read', agent)).toBe('allow');
+    expect(resolveToolPermission('mcp__other__write', agent)).toBe('ask');
+  });
+
+  it('falls back to global string action', () => {
+    const agent: AgentConfig = {
+      ...baseAgent,
+      permission: { mcp: 'deny' },
+    };
+    expect(resolveToolPermission('mcp__fs__read', agent)).toBe('deny');
+  });
+
+  it('per-server entry applies only to that server; others default to ask', () => {
+    const agent: AgentConfig = {
+      ...baseAgent,
+      permission: { mcp: { fs: 'allow' } },
+    };
+    expect(resolveToolPermission('mcp__fs__anything', agent)).toBe('allow');
+    expect(resolveToolPermission('mcp__github__read', agent)).toBe('ask');
+  });
+
+  it('respects explicit tool disable via agent.tools', () => {
+    const agent: AgentConfig = {
+      ...baseAgent,
+      tools: { 'mcp__fs__read': false },
+    };
+    expect(resolveToolPermission('mcp__fs__read', agent)).toBe('deny');
+  });
+
+  it('non-MCP unknown tool defaults to allow (unchanged behaviour)', () => {
+    expect(resolveToolPermission('something_else', baseAgent)).toBe('allow');
+  });
+});
+
+describe('parseMCPToolName', () => {
+  it('returns the server name for valid MCP tool names', () => {
+    expect(parseMCPToolName('mcp__filesystem__read_file')).toBe('filesystem');
+    expect(parseMCPToolName('mcp__github__create_pr')).toBe('github');
+  });
+
+  it('returns null for non-MCP tool names', () => {
+    expect(parseMCPToolName('bash')).toBeNull();
+    expect(parseMCPToolName('read_file')).toBeNull();
+    expect(parseMCPToolName('edit_file')).toBeNull();
+  });
+
+  it('returns null for malformed MCP names', () => {
+    expect(parseMCPToolName('mcp_foo_bar')).toBeNull();
+    expect(parseMCPToolName('mcp__only_one_part')).toBeNull();
+    expect(parseMCPToolName('foo__bar__baz')).toBeNull();
   });
 });

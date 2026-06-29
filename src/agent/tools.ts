@@ -26,19 +26,20 @@ export type ToolArgs =
   | LoadSkillArgs;
 
 export interface ToolDefinition {
-  name: ToolName;
+  name: string;
   description: string;
-  fn: (args: any) => Promise<any>;
+  fn: (args: any, ctx?: { signal?: AbortSignal }) => Promise<any>;
 }
 
 export interface ToolCall {
-  name: ToolName;
+  name: string;
   args: ToolArgs;
 }
 
 export interface ToolCallContext {
   agent: AgentConfig;
   onPermissionAsk?: (tool: string, detail?: string) => Promise<boolean>;
+  abortSignal?: AbortSignal;
 }
 
 export interface ToolResult {
@@ -47,7 +48,7 @@ export interface ToolResult {
   error?: string;
 }
 
-export const TOOL_REGISTRY: Record<ToolName, ToolDefinition> = {
+export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
   read_file: {
     name: 'read_file',
     description: `
@@ -227,7 +228,7 @@ export async function executeToolCall(call: ToolCall, context?: ToolCallContext)
   }
 
   try {
-    const result = await tool.fn(call.args);
+    const result = await tool.fn(call.args, { signal: context?.abortSignal });
     return {
       success: true,
       result
@@ -239,4 +240,14 @@ export async function executeToolCall(call: ToolCall, context?: ToolCallContext)
       error: error instanceof Error ? error.message : String(error)
     };
   }
+}
+
+/**
+ * Remove a tool from the registry by name.
+ *
+ * Used by the MCP bridge to unregister tools whose server is gone after a
+ * config reload. Safe to call with an unknown name (no-op).
+ */
+export function unregisterTool(name: string): void {
+  delete TOOL_REGISTRY[name];
 }
