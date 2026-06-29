@@ -1,6 +1,6 @@
 {
   "name": "@rosariomoscato/turbodev",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "type": "module",
   "description": "Terminal-based AI coding agent",
   "author": "Rosario Moscato",
