@@ -9,6 +9,16 @@ export interface AgentPermission {
   bash?: PermissionAction | BashPermissionRules;
   git?: PermissionAction;
   github?: PermissionAction;
+  /**
+   * MCP tools. Accepts either a single action applied to all MCP servers,
+   * or a per-server map keyed by server name (matching the `mcpServers` keys).
+   * Default (when absent): `'ask'`.
+   *
+   * Examples:
+   *   mcp: 'allow'                              // allow every MCP tool
+   *   mcp: { filesystem: 'allow', github: 'ask' }
+   */
+  mcp?: PermissionAction | Record<string, PermissionAction>;
 }
 
 export interface TaskPermission {
