@@ -10,8 +10,9 @@ import { githubTool, GithubArgs } from '../tools/github.js';
 import type { AgentConfig } from './types.js';
 import { resolveToolPermission } from './permissions.js';
 import type { LoadSkillArgs, Skill } from '../skills/types.js';
+import type { SaveMemoryArgs } from '../memory/tool.js';
 
-export type ToolName = 'read_file' | 'list_files' | 'edit_file' | 'mkdir' | 'grep' | 'bash' | 'question' | 'git' | 'github' | 'task' | 'load_skill';
+export type ToolName = 'read_file' | 'list_files' | 'edit_file' | 'mkdir' | 'grep' | 'bash' | 'question' | 'git' | 'github' | 'task' | 'load_skill' | 'save_memory';
 
 export type ToolArgs =
   | ReadFileArgs
@@ -23,7 +24,8 @@ export type ToolArgs =
   | QuestionArgs
   | GitArgs
   | GithubArgs
-  | LoadSkillArgs;
+  | LoadSkillArgs
+  | SaveMemoryArgs;
 
 export interface ToolDefinition {
   name: string;
@@ -171,6 +173,16 @@ Returns: { success: boolean, operation: string, data?: any, error?: string }`,
       - resource: Optional relative path to a file within the skill directory (e.g. "scripts/setup.sh", "references/guide.md")
     Returns: { success: boolean, name: string, instructions?: string, resource?: string, resourceContent?: string, error?: string }`.trim(),
     fn: async () => ({ success: false, name: '', error: 'load_skill tool not configured' })
+  },
+  save_memory: {
+    name: 'save_memory',
+    description: `Save a durable fact to persistent memory for future sessions.
+    Args: { content: string, category?: string }
+      - content: A concise, atomic fact useful in future sessions (e.g., "User prefers TypeScript", "Project uses PostgreSQL 16")
+      - category: One of: preferences, decisions, architecture, facts. Default: facts.
+    Only save information that will be relevant in FUTURE sessions — not transient task state, not the current file being edited.
+    Returns: { success: boolean, content: string, category: string, error?: string }`.trim(),
+    fn: async () => ({ success: false, content: '', category: 'facts', error: 'save_memory tool not configured' })
   }
 };
 
@@ -182,6 +194,13 @@ export function registerLoadSkillTool(skills: Skill[]): void {
   TOOL_REGISTRY.load_skill.fn = async (args: LoadSkillArgs) => {
     const { loadSkillTool } = await import('../skills/tool.js');
     return loadSkillTool(args, skills);
+  };
+}
+
+export function registerSaveMemoryTool(cwd: string): void {
+  TOOL_REGISTRY.save_memory.fn = async (args: SaveMemoryArgs) => {
+    const { saveMemoryTool } = await import('../memory/tool.js');
+    return saveMemoryTool(args, cwd);
   };
 }
 

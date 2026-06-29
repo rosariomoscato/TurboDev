@@ -2,7 +2,7 @@ import { TOOL_REGISTRY } from './tools.js';
 import { AgentConfig } from './types.js';
 import type { Skill } from '../skills/types.js';
 
-export function generateSystemPrompt(projectContext?: string, agent?: AgentConfig, skills?: Skill[], mcpCount?: number): string {
+export function generateSystemPrompt(projectContext?: string, agent?: AgentConfig, skills?: Skill[], mcpCount?: number, memory?: string): string {
   const toolsToInclude = Object.values(TOOL_REGISTRY).filter(tool => {
     if (!agent?.tools) return true;
     if (agent.tools[tool.name] === false) return false;
@@ -77,6 +77,16 @@ IMPORTANT: Always respond in the same language the user writes in.`;
 ${projectContext}
 
 Follow the instructions from AGENTS.md when working on this project.`;
+  }
+
+  if (memory && memory.trim()) {
+    prompt += `
+
+## Memory (from .turbodev/memory.md)
+
+${memory.trim()}
+
+These are persistent memories from previous sessions. Use them as context, but verify technical details before relying on them — they may be outdated.`;
   }
 
   return prompt;

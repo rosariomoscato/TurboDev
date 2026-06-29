@@ -44,6 +44,7 @@ export async function runAgent(
   abortSignal?: AbortSignal,
   skills?: Skill[],
   mcpRegistry?: MCPRegistry,
+  memory?: string,
 ): Promise<AgentResult> {
   const filteredSkills = skills
     ? agent.skills
@@ -58,6 +59,7 @@ export async function runAgent(
     agent,
     filteredSkills,
     mcpCount,
+    memory,
   );
   let messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
