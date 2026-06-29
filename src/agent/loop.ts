@@ -8,6 +8,7 @@ import { extractToolInvocations, formatToolResult } from './parser.js';
 import { generateSystemPrompt } from './system-prompt.js';
 import { AgentConfig } from './types.js';
 import type { Skill } from '../skills/types.js';
+import type { MCPRegistry } from '../mcp/registry.js';
 
 export interface AgentCallbacks {
   onQuestion?: (question: string, options?: string[]) => Promise<string>;
@@ -41,7 +42,8 @@ export async function runAgent(
   onStream?: (chunk: AgentStreamChunk) => void,
   callbacks?: AgentCallbacks,
   abortSignal?: AbortSignal,
-  skills?: Skill[]
+  skills?: Skill[],
+  mcpRegistry?: MCPRegistry,
 ): Promise<AgentResult> {
   const filteredSkills = skills
     ? agent.skills
@@ -49,10 +51,13 @@ export async function runAgent(
       : skills
     : undefined;
 
+  const mcpCount = mcpRegistry?.getConnectedCount() ?? 0;
+
   const systemPrompt = generateSystemPrompt(
     projectContext ?? undefined,
     agent,
-    filteredSkills
+    filteredSkills,
+    mcpCount,
   );
   let messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
@@ -70,6 +75,7 @@ export async function runAgent(
   const toolContext: ToolCallContext = {
     agent,
     onPermissionAsk: callbacks?.onPermissionAsk,
+    abortSignal,
   };
 
   const llmOptions: { temperature?: number; topP?: number } = {};

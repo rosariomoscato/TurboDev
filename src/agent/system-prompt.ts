@@ -2,7 +2,7 @@ import { TOOL_REGISTRY } from './tools.js';
 import { AgentConfig } from './types.js';
 import type { Skill } from '../skills/types.js';
 
-export function generateSystemPrompt(projectContext?: string, agent?: AgentConfig, skills?: Skill[]): string {
+export function generateSystemPrompt(projectContext?: string, agent?: AgentConfig, skills?: Skill[], mcpCount?: number): string {
   const toolsToInclude = Object.values(TOOL_REGISTRY).filter(tool => {
     if (!agent?.tools) return true;
     if (agent.tools[tool.name] === false) return false;
@@ -27,12 +27,20 @@ export function generateSystemPrompt(projectContext?: string, agent?: AgentConfi
     }
   }
 
+  // Build the optional MCP section — only when at least one server is connected.
+  let mcpSection = '';
+  if (mcpCount && mcpCount > 0) {
+    const plural = mcpCount === 1 ? 'server' : 'servers';
+    mcpSection = `\nMCP TOOLS\n=========\n${mcpCount} external MCP ${plural} connected. Their tools are listed above with names starting with \`mcp__<server>__<tool>\`. Call them exactly like native tools: tool: mcp__server__tool_name({...}). The first call to each server may require user approval.\n`;
+  }
+
   let prompt = `${agent?.prompt ? agent.prompt + '\n\n' : ''}You are TurboDev, an AI coding assistant.${identitySuffix} You help users with coding tasks by reading, listing, and editing files in their project.
 
 You have access to the following tools:
 
 ${toolsStr}
 ${skillsSection}
+${mcpSection}
 IMPORTANT RULES:
 1. When you want to use a tool, respond with exactly one line in the format: tool: TOOL_NAME({JSON_ARGS}) and nothing else
 2. Use compact single-line JSON with double quotes
@@ -40,6 +48,7 @@ IMPORTANT RULES:
 4. If no tool is needed, respond normally to the user
 5. Only use one tool per line
 6. You can chain multiple tool calls (e.g., read a file, then edit it)
+7. MCP tool calls follow the same protocol as native tools — use the prefixed name (mcp__server__tool)
 
 GIT SAFETY RULES:
 1. NEVER force push to main or master branch
