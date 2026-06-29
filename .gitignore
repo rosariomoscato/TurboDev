@@ -5,3 +5,7 @@ dist/
 docs/.vitepress/cache/
 specs/
 AGENTS.md
+
+# VitePress build temp
+docs/.vitepress/.temp/
+
