@@ -19,6 +19,8 @@ All commands start with `/`. Type `/` in the input bar to open the command palet
 | `/sessions` | List and switch between sessions |
 | `/setup` | Re-run setup wizard |
 | `/skills` | List discovered agent skills |
+| `/mcp` | List MCP servers and tools |
+| `/mcp reload` | Re-read `.turbodev/mcp.json` and reconnect |
 
 ## Git Commands
 
@@ -153,6 +155,36 @@ Lists all discovered agent skills with their status, source, and description.
 ```
 
 Shows each skill's name, whether it's enabled or disabled, where it was found (builtin, global, or project), and its description. Skills are loaded from three sources in priority order: project (`.agents/skills/`) > global (`~/.config/turbodev/skills/`) > builtin.
+
+### /mcp
+
+Lists all configured MCP (Model Context Protocol) servers with their connection status, tool count, and any errors.
+
+```
+/mcp
+```
+
+Output format:
+
+```
+MCP Servers (1 connected, 5 tools total):
+  ✓ filesystem            5 tools    connected
+  ✗ db                    error       ECONNREFUSED
+
+Use /mcp reload to re-read .turbodev/mcp.json and reconnect.
+```
+
+Status icons: `✓` connected, `✗` error, `○` other. The status bar shows `MCP:N` (magenta) when N servers are connected.
+
+### /mcp reload
+
+Re-reads `.turbodev/mcp.json`, disconnects removed/changed servers, and connects new ones. Unchanged servers stay connected (no churn).
+
+```
+/mcp reload
+```
+
+Use this after editing the config file. See [MCP configuration](/en/configuration/mcp) for the full reference.
 
 ### /exit
 

@@ -168,4 +168,23 @@ tools:
 
 Quando uno strumento è disabilitato (`false`), l'agente riceve un errore se tenta di utilizzarlo: `Tool "edit_file" is denied for agent "plan"`.
 
+## Strumenti MCP (dinamici)
+
+Oltre agli strumenti nativi sopra, gli agenti possono invocare **strumenti MCP** registrati dinamicamente dai server MCP esterni dichiarati in `.turbodev/mcp.json`. Questi strumenti appaiono automaticamente nel prompt di sistema quando almeno un server è connesso.
+
+I nomi dei tool MCP seguono la convenzione `mcp__<server>__<tool>` — ad esempio, un server `filesystem` che espone un tool `read_file` è richiamabile come:
+
+```
+tool: mcp__filesystem__read_file({"path": "/tmp/esempio.txt"})
+```
+
+I tool MCP non sono elencati nella configurazione `tools:` (sono dinamici). Per disabilitare uno specifico tool MCP, usa il suo nome prefissato completo:
+
+```yaml
+tools:
+  "mcp__filesystem__delete": false
+```
+
+I permessi dei tool MCP hanno default `ask` e si configurano tramite `permission.mcp`. Vedi [Permessi](/it/agenti/permessi#strumenti-mcp) e [configurazione MCP](/it/configurazione/mcp) per i dettagli.
+
 [Scopri di più sui permessi](/it/agenti/permessi)

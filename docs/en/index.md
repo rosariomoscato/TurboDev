@@ -17,6 +17,7 @@ Get started with TurboDev.
 - **Real-time Cost Tracking** — See how much you're spending in the status bar
 - **Request Interruption** — Press Escape to cancel a running AI request
 - **Agent Skills** — Extend agent capabilities with installable skill packs (`.agents/skills/`)
+- **MCP Support** — Connect external tool servers via the [Model Context Protocol](https://modelcontextprotocol.io) (`.turbodev/mcp.json`)
 
 ## Prerequisites
 
@@ -47,4 +48,5 @@ On first launch, the setup wizard will ask for your OpenRouter API key and prefe
 - [Learn the commands](/en/usage/commands)
 - [Explore the agent system](/en/agents/)
 - [Agent Skills](/en/configuration/skills)
+- [MCP servers](/en/configuration/mcp)
 - [Customize permissions](/en/agents/permissions)

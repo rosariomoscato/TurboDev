@@ -168,4 +168,23 @@ tools:
 
 When a tool is disabled (`false`), the agent receives an error if it tries to use it: `Tool "edit_file" is denied for agent "plan"`.
 
+## MCP Tools (dynamic)
+
+In addition to the native tools above, agents can invoke **MCP tools** registered dynamically from external MCP servers declared in `.turbodev/mcp.json`. These tools appear automatically in the system prompt when at least one server is connected.
+
+MCP tool names follow the convention `mcp__<server>__<tool>` — for example, a `filesystem` server exposing a `read_file` tool is callable as:
+
+```
+tool: mcp__filesystem__read_file({"path": "/tmp/example.txt"})
+```
+
+MCP tools are not listed in the `tools:` config (they're dynamic). To disable a specific MCP tool, use its full prefixed name:
+
+```yaml
+tools:
+  "mcp__filesystem__delete": false
+```
+
+Permissions for MCP tools default to `ask` and are configured via `permission.mcp`. See [Permissions](/en/agents/permissions#mcp-tools) and [MCP configuration](/en/configuration/mcp) for details.
+
 [Learn more about permissions](/en/agents/permissions)

@@ -91,6 +91,36 @@ permission:
 
 Nessuna approvazione necessaria — l'agente può fare tutto. Questa è la configurazione predefinita per l'agente editor.
 
+### Strumenti MCP
+
+I tool MCP (Model Context Protocol) hanno default **`ask`** — l'utente deve approvare la prima chiamata per ogni server. Configura per-server o globalmente tramite la chiave `mcp`:
+
+```yaml
+permission:
+  mcp: ask                                # chiedi per ogni server MCP (predefinito)
+  # OPPURE
+  mcp: allow                              # autorizza ogni server MCP senza chiedere
+  # OPPURE
+  mcp: { filesystem: allow, github: ask } # override per-server
+```
+
+**Ordine di risoluzione**: voce per-server → stringa globale → default `ask`.
+
+| Config | `mcp__filesystem__read` | `mcp__github__create_pr` |
+|---|---|---|
+| (nessuna) | ask | ask |
+| `mcp: allow` | allow | allow |
+| `mcp: { filesystem: allow }` | allow | ask |
+
+Puoi anche disabilitare un tool MCP specifico tramite `tools` (ha priorità su `mcp`):
+
+```yaml
+tools:
+  "mcp__filesystem__delete": false   # nega sempre questo tool specifico
+```
+
+Vedi [configurazione MCP](/it/configurazione/mcp) per dichiarare i server in `.turbodev/mcp.json`.
+
 ## Sovrascrittura tramite strumenti
 
 Impostare uno strumento su `false` nella configurazione `tools` ha la priorità sui permessi:

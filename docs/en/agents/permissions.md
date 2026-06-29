@@ -91,6 +91,36 @@ permission:
 
 No approval needed — the agent can do everything. This is the default for the editor agent.
 
+### MCP Tools
+
+MCP (Model Context Protocol) tools default to **`ask`** — the user must approve the first call from each server. Configure per-server or globally via the `mcp` permission key:
+
+```yaml
+permission:
+  mcp: ask                                # ask for every MCP server (default)
+  # OR
+  mcp: allow                              # allow every MCP server without prompting
+  # OR
+  mcp: { filesystem: allow, github: ask } # per-server overrides
+```
+
+**Resolution order**: per-server map entry → global string → default `ask`.
+
+| Config | `mcp__filesystem__read` | `mcp__github__create_pr` |
+|---|---|---|
+| (none) | ask | ask |
+| `mcp: allow` | allow | allow |
+| `mcp: { filesystem: allow }` | allow | ask |
+
+You can also disable a specific MCP tool via `tools` (takes priority over `mcp`):
+
+```yaml
+tools:
+  "mcp__filesystem__delete": false   # always deny this specific tool
+```
+
+See [MCP configuration](/en/configuration/mcp) for declaring servers in `.turbodev/mcp.json`.
+
 ## Tool Override
 
 Setting a tool to `false` in the `tools` config takes priority over permissions:

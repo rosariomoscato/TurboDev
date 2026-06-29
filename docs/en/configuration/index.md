@@ -45,4 +45,6 @@ Never commit your API key to version control.
 ## Next Steps
 
 - [Models](/en/configuration/models) — Browse available models
+- [Agent Skills](/en/configuration/skills) — Installable skill packs
+- [MCP Servers](/en/configuration/mcp) — Connect external tool servers via Model Context Protocol
 - [AGENTS.md](/en/configuration/agents-md) — Project context file

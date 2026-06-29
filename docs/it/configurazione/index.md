@@ -45,4 +45,6 @@ Non committare mai la tua chiave API nel controllo di versione.
 ## Prossimi passi
 
 - [Modelli](/it/configurazione/modelli) — Sfoglia i modelli disponibili
+- [Agent Skills](/it/configurazione/skills) — Skill pack installabili
+- [Server MCP](/it/configurazione/mcp) — Connetti server di strumenti esterni tramite Model Context Protocol
 - [AGENTS.md](/it/configurazione/agents-md) — File di contesto del progetto
