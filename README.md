@@ -196,7 +196,7 @@ Starting June 2026, we ship a new feature every week:
 
 | Week | Feature | Description |
 |------|---------|-------------|
-| Jun 11 | **Skills** | Installable skill packs that extend agent capabilities |
+| Jun 11 | **Skills** ✅ | Installable skill packs that extend agent capabilities |
 | Jun 18 | **MCP** ✅ | Model Context Protocol support for external tool integration |
 | Jun 25 | **Persistent Memory** | Cross-session memory so the AI remembers your project context |
 | Jul 2 | **Economy Mode** | Budget-aware mode that optimizes token usage and model selection |
