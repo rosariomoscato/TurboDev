@@ -21,6 +21,10 @@ Tutti i comandi iniziano con `/`. Digita `/` nella barra di input per aprire la 
 | `/skills` | Elenca le agent skill scoperte |
 | `/mcp` | Elenca i server MCP e i tool |
 | `/mcp reload` | Rilegge `.turbodev/mcp.json` e riconnette |
+| `/memory` | Mostra le entry di memoria persistente |
+| `/memory add [cat] <text>` | Aggiunge una entry (categorie: preferences, decisions, architecture, facts) |
+| `/memory clear [cat]` | Cancella tutta la memoria o una categoria |
+| `/memory reload` | Ricarica la memoria da disco |
 
 ## Comandi Git
 
@@ -185,6 +189,45 @@ Rilegge `.turbodev/mcp.json`, disconnette i server rimossi/cambiati e connette q
 ```
 
 Usalo dopo aver modificato il file di configurazione. Vedi [configurazione MCP](/it/configurazione/mcp) per il riferimento completo.
+
+### /memory
+
+Mostra tutte le entry di memoria persistente raggruppate per categoria. L'AI usa questi fatti come contesto tra le sessioni.
+
+```
+/memory
+```
+
+La memoria è salvata in `.turbodev/memory.md` (Markdown plain, gitignored). L'AI può salvare fatti autonomamente tramite il tool `save_memory`, oppure puoi gestirli con i comandi seguenti. Vedi [Memoria Persistente](/it/configurazione/memory) per il riferimento completo.
+
+### /memory add
+
+Aggiunge una nuova entry di memoria. La categoria predefinita è `facts`.
+
+```
+/memory add Use pnpm, never npm
+/memory add preferences I prefer 2-space indentation
+/memory add decisions We deploy to Vercel
+```
+
+Categorie: `preferences`, `decisions`, `architecture`, `facts`.
+
+### /memory clear
+
+Cancella tutta la memoria, o solo una categoria. Chiede conferma `[y/n]`.
+
+```
+/memory clear              # cancella tutto
+/memory clear decisions    # cancella una categoria
+```
+
+### /memory reload
+
+Rilegge `.turbodev/memory.md` da disco. Usalo dopo aver modificato manualmente il file.
+
+```
+/memory reload
+```
 
 ### /exit
 

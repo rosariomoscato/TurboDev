@@ -18,6 +18,7 @@ Agents have access to a set of tools for interacting with your codebase. Tool av
 | `question` | Ask the user a question |
 | `read_file` | Read file contents |
 | `load_skill` | Load skill instructions or resource files |
+| `save_memory` | Save a durable fact to persistent memory |
 | `task` | Invoke a subagent |
 
 ## read_file
@@ -106,6 +107,25 @@ When `resource` is omitted, returns the full SKILL.md instructions. When provide
 ::: tip
 This tool is always enabled and cannot be disabled per-agent. The LLM only has access to skill metadata in the system prompt until it calls `load_skill`.
 :::
+
+## save_memory
+
+Save a durable fact to persistent memory (`.turbodev/memory.md`) for future sessions. The LLM calls this when it learns something worth remembering.
+
+**Args**: `{ content: string, category?: string }`
+
+```
+save_memory({ "content": "User prefers pnpm over npm", "category": "preferences" })
+save_memory({ "content": "Project uses PostgreSQL 16" })
+```
+
+Categories: `preferences`, `decisions`, `architecture`, `facts` (default). Only save information relevant to **future** sessions — not transient task state.
+
+::: tip
+This tool is always enabled and writes only to `.turbodev/memory.md` (gitignored). It cannot modify other files. Memory survives compaction because it lives in the system prompt.
+:::
+
+See [Persistent Memory](/en/configuration/memory) for the full reference.
 
 ## task
 

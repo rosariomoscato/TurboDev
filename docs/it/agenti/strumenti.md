@@ -18,6 +18,7 @@ Gli agenti hanno accesso a un insieme di strumenti per interagire con il tuo cod
 | `question` | Pone una domanda all'utente |
 | `read_file` | Legge il contenuto di un file |
 | `load_skill` | Carica istruzioni di skill o file di risorsa |
+| `save_memory` | Salva un fatto durevole nella memoria persistente |
 | `task` | Invoca un sottoagente |
 
 ## read_file
@@ -106,6 +107,25 @@ Quando `resource` è omesso, restituisce le istruzioni complete del SKILL.md. Qu
 ::: tip
 Questo strumento è sempre abilitato e non può essere disabilitato per agente. L'LLM ha accesso solo ai metadati della skill nel prompt di sistema finché non chiama `load_skill`.
 :::
+
+## save_memory
+
+Salva un fatto durevole nella memoria persistente (`.turbodev/memory.md`) per sessioni future. L'LLM lo chiama quando impara qualcosa che vale la pena ricordare.
+
+**Argomenti**: `{ content: string, category?: string }`
+
+```
+save_memory({ "content": "User prefers pnpm over npm", "category": "preferences" })
+save_memory({ "content": "Project uses PostgreSQL 16" })
+```
+
+Categorie: `preferences`, `decisions`, `architecture`, `facts` (predefinita). Salva solo informazioni rilevanti per **sessioni future** — non stato transitorio.
+
+::: tip
+Questo strumento è sempre attivo e scrive solo in `.turbodev/memory.md` (gitignored). Non può modificare altri file. La memoria sopravvive alla compattazione perché vive nel prompt di sistema.
+:::
+
+Vedi [Memoria Persistente](/it/configurazione/memory) per il riferimento completo.
 
 ## task
 

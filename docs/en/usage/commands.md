@@ -21,6 +21,10 @@ All commands start with `/`. Type `/` in the input bar to open the command palet
 | `/skills` | List discovered agent skills |
 | `/mcp` | List MCP servers and tools |
 | `/mcp reload` | Re-read `.turbodev/mcp.json` and reconnect |
+| `/memory` | Show persistent memory entries |
+| `/memory add [cat] <text>` | Add a memory entry (categories: preferences, decisions, architecture, facts) |
+| `/memory clear [cat]` | Clear all or one category of memory |
+| `/memory reload` | Reload memory from disk |
 
 ## Git Commands
 
@@ -185,6 +189,45 @@ Re-reads `.turbodev/mcp.json`, disconnects removed/changed servers, and connects
 ```
 
 Use this after editing the config file. See [MCP configuration](/en/configuration/mcp) for the full reference.
+
+### /memory
+
+Shows all persistent memory entries grouped by category. The AI uses these facts as context across sessions.
+
+```
+/memory
+```
+
+Memory is stored in `.turbodev/memory.md` (plain Markdown, gitignored). The AI can save facts autonomously via the `save_memory` tool, or you can manage them with the commands below. See [Persistent Memory](/en/configuration/memory) for the full reference.
+
+### /memory add
+
+Adds a new memory entry. Default category is `facts`.
+
+```
+/memory add Use pnpm, never npm
+/memory add preferences I prefer 2-space indentation
+/memory add decisions We deploy to Vercel
+```
+
+Categories: `preferences`, `decisions`, `architecture`, `facts`.
+
+### /memory clear
+
+Clears all memory, or just one category. Asks for `[y/n]` confirmation.
+
+```
+/memory clear              # wipe everything
+/memory clear decisions    # wipe one category
+```
+
+### /memory reload
+
+Re-reads `.turbodev/memory.md` from disk. Use after editing the file manually.
+
+```
+/memory reload
+```
 
 ### /exit
 
