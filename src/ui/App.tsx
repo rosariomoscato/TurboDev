@@ -8,13 +8,15 @@ import { fetchAvailableModels, getModelPricing } from '../llm/models.js';
 import { loadAgentsMd } from '../context/agents-md.js';
 import { loadAllAgents } from '../agent/registry.js';
 import { createTaskTool } from '../tools/task.js';
-import { registerTaskTool, registerLoadSkillTool } from '../agent/tools.js';
+import { registerTaskTool, registerLoadSkillTool, registerSaveMemoryTool } from '../agent/tools.js';
 import type { AgentConfig } from '../agent/types.js';
 import { loadAllSkills } from '../skills/registry.js';
 import type { Skill } from '../skills/types.js';
 import { createMCPRegistry, MCPRegistry } from '../mcp/registry.js';
 import { registerMCPTools, unregisterAllMCPTools } from '../mcp/bridge.js';
 import type { MCPServerState } from '../mcp/types.js';
+import { loadMemory, loadMemoryEntries, appendMemory, clearMemory } from '../memory/store.js';
+import type { MemoryCategory } from '../memory/types.js';
 import SetupWizard from './SetupWizard.js';
 import InitWizard from './InitWizard.js';
 import ChatView from './ChatView.js';
@@ -73,6 +75,7 @@ const PALETTE_COMMANDS: PaletteCommand[] = [
   { label: '/sessions', value: '/sessions', description: 'List and switch sessions' },
   { label: '/skills', value: '/skills', description: 'List available skills' },
   { label: '/mcp', value: '/mcp', description: 'List MCP servers and tools' },
+  { label: '/memory', value: '/memory', description: 'Manage persistent memory' },
   { label: '/setup', value: '/setup', description: 'Re-run setup wizard' },
 ].sort((a, b) => a.label.localeCompare(b.label));
 
@@ -145,6 +148,9 @@ export default function App() {
 
   const [allAgents] = useState<AgentConfig[]>(() => loadAllAgents(process.cwd()));
   const [allSkills] = useState<Skill[]>(() => loadAllSkills(process.cwd()));
+
+  // --- Memory state -------------------------------------------------------
+  const [memoryContext, setMemoryContext] = useState<string>(() => loadMemory(process.cwd()));
 
   // --- MCP registry state ------------------------------------------------
   const [mcpRegistry, setMcpRegistry] = useState<MCPRegistry | null>(null);
@@ -238,6 +244,7 @@ export default function App() {
   useEffect(() => {
     registerTaskTool(createTaskTool(process.cwd(), currentAgent, runAgent));
     registerLoadSkillTool(allSkills);
+    registerSaveMemoryTool(process.cwd());
   }, []);
 
   // --- MCP lifecycle: connect on mount, register tools, cleanup on unmount.
@@ -633,6 +640,7 @@ export default function App() {
       controller.signal,
       allSkills,
       mcpRegistry ?? undefined,
+      memoryContext || undefined,
     );
 
     abortControllerRef.current = null;
@@ -772,6 +780,7 @@ export default function App() {
             '  /sessions       List sessions',
             '  /skills         List agent skills',
             '  /mcp            List MCP servers and tools',
+            '  /memory         Manage persistent memory',
             '  /exit           Exit TurboDev',
             '',
             'Git Commands:',
@@ -976,6 +985,98 @@ export default function App() {
             content: [summary, ...mcpServers.map(formatServer), '', 'Use /mcp reload to re-read .turbodev/mcp.json and reconnect.'].join('\n')
           }]);
         }
+        return;
+      }
+
+      if (command === 'memory' || command.startsWith('memory ')) {
+        const sub = command.slice(7).trim();
+
+        if (sub === '' || sub === 'show') {
+          const entries = loadMemoryEntries(process.cwd());
+          if (entries.length === 0) {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: 'No memories saved yet. Use /memory add <text> or ask the AI to save durable facts with the save_memory tool.'
+            }]);
+          } else {
+            const cats: Record<string, string[]> = {};
+            for (const e of entries) (cats[e.category] ??= []).push(e.content);
+            const lines: string[] = [`Memory (${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}):`];
+            for (const [cat, items] of Object.entries(cats)) {
+              lines.push(`\n  ${cat}:`);
+              for (const item of items) lines.push(`    - ${item}`);
+            }
+            setMessages(prev => [...prev, { role: 'assistant', content: lines.join('\n') }]);
+          }
+          return;
+        }
+
+        if (sub.startsWith('add ')) {
+          const rest = sub.slice(4).trim();
+          const knownCats = ['preferences', 'decisions', 'architecture', 'facts'];
+          const firstWord = rest.split(/\s+/)[0]?.toLowerCase();
+          let category: MemoryCategory = 'facts';
+          let content = rest;
+          if (knownCats.includes(firstWord)) {
+            category = firstWord as MemoryCategory;
+            content = rest.slice(firstWord.length).trim();
+          }
+          if (!content) {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: 'Usage: /memory add [category] <text>\nCategories: preferences, decisions, architecture, facts (default)'
+            }]);
+            return;
+          }
+          const result = appendMemory(process.cwd(), content, category);
+          if (result.success) {
+            setMemoryContext(loadMemory(process.cwd()));
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `Saved to memory [${category}]: ${content}`
+            }]);
+          } else {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `Failed to save memory: ${result.error}`
+            }]);
+          }
+          return;
+        }
+
+        if (sub === 'reload') {
+          setMemoryContext(loadMemory(process.cwd()));
+          const entries = loadMemoryEntries(process.cwd());
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: `Memory reloaded: ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}.`
+          }]);
+          return;
+        }
+
+        if (sub === 'clear' || sub.startsWith('clear ')) {
+          const catArg = sub.slice(6).trim();
+          const knownCats = ['preferences', 'decisions', 'architecture', 'facts'];
+          const category = knownCats.includes(catArg) ? catArg as MemoryCategory : undefined;
+          const scope = category ? `category "${category}"` : 'all memory';
+          const confirmed = await handleQuestion(`Clear ${scope}? This cannot be undone.`, ['y', 'n']);
+          if (confirmed === 'y') {
+            const result = clearMemory(process.cwd(), category);
+            setMemoryContext(loadMemory(process.cwd()));
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: result.success ? `Cleared ${scope}.` : `Failed to clear: ${result.error}`
+            }]);
+          } else {
+            setMessages(prev => [...prev, { role: 'assistant', content: 'Cancelled.' }]);
+          }
+          return;
+        }
+
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: 'Usage:\n  /memory              Show all memories\n  /memory add [cat] <text>  Add a memory\n  /memory clear [cat]  Clear all or one category\n  /memory reload       Reload from disk'
+        }]);
         return;
       }
 
@@ -1541,6 +1642,12 @@ export default function App() {
                   <>
                     <Text color="gray">{'  \u2502  '}</Text>
                     <Text color="magenta">{`MCP:${mcpRegistry.getConnectedCount()}`}</Text>
+                  </>
+                )}
+                {memoryContext.trim() && (
+                  <>
+                    <Text color="gray">{'  \u2502  '}</Text>
+                    <Text color="blue">{`\u25CF mem:${loadMemoryEntries(process.cwd()).length}`}</Text>
                   </>
                 )}
                 <Text color="gray">{'  │  '}</Text>
