@@ -18,6 +18,7 @@ Inizia a usare TurboDev.
 - **Interruzione delle richieste** — Premi Escape per cancellare una richiesta AI in corso
 - **Agent Skills** — Estendi le capacità degli agenti con skill pack installabili (`.agents/skills/`)
 - **Supporto MCP** — Connetti server di strumenti esterni tramite il [Model Context Protocol](https://modelcontextprotocol.io) (`.turbodev/mcp.json`)
+- **Memoria Persistente** — L'AI ricorda le tue preferenze, decisioni e fatti del progetto tra le sessioni (`.turbodev/memory.md`)
 
 ## Prerequisiti
 
@@ -49,4 +50,5 @@ Al primo avvio, la procedura guidata ti chiederà la chiave API OpenRouter e il 
 - [Esplora il sistema degli agenti](/it/agenti/)
 - [Agent Skills](/it/configurazione/skills)
 - [Server MCP](/it/configurazione/mcp)
+- [Memoria Persistente](/it/configurazione/memory)
 - [Personalizza i permessi](/it/agenti/permessi)
