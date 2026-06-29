@@ -12,6 +12,9 @@ import { registerTaskTool, registerLoadSkillTool } from '../agent/tools.js';
 import type { AgentConfig } from '../agent/types.js';
 import { loadAllSkills } from '../skills/registry.js';
 import type { Skill } from '../skills/types.js';
+import { createMCPRegistry, MCPRegistry } from '../mcp/registry.js';
+import { registerMCPTools, unregisterAllMCPTools } from '../mcp/bridge.js';
+import type { MCPServerState } from '../mcp/types.js';
 import SetupWizard from './SetupWizard.js';
 import InitWizard from './InitWizard.js';
 import ChatView from './ChatView.js';
@@ -69,6 +72,7 @@ const PALETTE_COMMANDS: PaletteCommand[] = [
   { label: '/rollback', value: '/rollback', description: 'Show recent commits' },
   { label: '/sessions', value: '/sessions', description: 'List and switch sessions' },
   { label: '/skills', value: '/skills', description: 'List available skills' },
+  { label: '/mcp', value: '/mcp', description: 'List MCP servers and tools' },
   { label: '/setup', value: '/setup', description: 'Re-run setup wizard' },
 ].sort((a, b) => a.label.localeCompare(b.label));
 
@@ -141,6 +145,11 @@ export default function App() {
 
   const [allAgents] = useState<AgentConfig[]>(() => loadAllAgents(process.cwd()));
   const [allSkills] = useState<Skill[]>(() => loadAllSkills(process.cwd()));
+
+  // --- MCP registry state ------------------------------------------------
+  const [mcpRegistry, setMcpRegistry] = useState<MCPRegistry | null>(null);
+  const [mcpServers, setMcpServers] = useState<MCPServerState[]>([]);
+  const [mcpReady, setMcpReady] = useState(false);
   const [primaryAgents] = useState<AgentConfig[]>(() => allAgents.filter(a => a.mode !== 'subagent' && !a.hidden));
   const [currentAgentIndex, setCurrentAgentIndex] = useState(0);
   const [currentAgent, setCurrentAgent] = useState<AgentConfig>(() => allAgents.filter(a => a.mode !== 'subagent' && !a.hidden)[0]);
@@ -229,6 +238,26 @@ export default function App() {
   useEffect(() => {
     registerTaskTool(createTaskTool(process.cwd(), currentAgent, runAgent));
     registerLoadSkillTool(allSkills);
+  }, []);
+
+  // --- MCP lifecycle: connect on mount, register tools, cleanup on unmount.
+  useEffect(() => {
+    let cancelled = false;
+    const registry = createMCPRegistry(process.cwd());
+    setMcpRegistry(registry);
+    setMcpReady(false);
+    (async () => {
+      await registry.connectAll();
+      if (cancelled) return;
+      registerMCPTools(registry);
+      setMcpServers(registry.getServers());
+      setMcpReady(true);
+    })();
+    return () => {
+      cancelled = true;
+      unregisterAllMCPTools();
+      registry.shutdownAll();
+    };
   }, []);
 
   useEffect(() => {
@@ -602,7 +631,8 @@ export default function App() {
       },
       { onQuestion: handleQuestion, onPermissionAsk: handlePermissionAsk },
       controller.signal,
-      allSkills
+      allSkills,
+      mcpRegistry ?? undefined,
     );
 
     abortControllerRef.current = null;
@@ -740,6 +770,8 @@ export default function App() {
             '  /compact        Compact conversation',
             '  /new            New session',
             '  /sessions       List sessions',
+            '  /skills         List agent skills',
+            '  /mcp            List MCP servers and tools',
             '  /exit           Exit TurboDev',
             '',
             'Git Commands:',
@@ -891,6 +923,57 @@ export default function App() {
           setMessages(prev => [...prev, {
             role: 'assistant',
             content: [`Skills (${enabled.length} enabled${disabled.length ? `, ${disabled.length} disabled` : ''}):`, ...lines, ...disabledLines].join('\n')
+          }]);
+        }
+        return;
+      }
+
+      if (command === 'mcp' || command === 'mcp reload') {
+        if (!mcpRegistry) {
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: 'MCP registry not initialized yet.'
+          }]);
+          return;
+        }
+        if (command === 'mcp reload') {
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: 'Reloading MCP config...'
+          }]);
+          await mcpRegistry.reload(process.cwd());
+          registerMCPTools(mcpRegistry);
+          setMcpServers([...mcpRegistry.getServers()]);
+          const connected = mcpRegistry.getConnectedCount();
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: `MCP reloaded: ${connected} server${connected === 1 ? '' : 's'} connected, ${mcpRegistry.getTools().length} tool${mcpRegistry.getTools().length === 1 ? '' : 's'} available.`
+          }]);
+          return;
+        }
+        // /mcp — list servers
+        if (mcpServers.length === 0) {
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: 'No MCP servers configured. Add servers to .turbodev/mcp.json (Claude Desktop-compatible format).\n\nExample:\n{\n  "mcpServers": {\n    "filesystem": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]\n    }\n  }\n}\n\nUse /mcp reload after editing the config.'
+          }]);
+        } else {
+          const connected = mcpServers.filter(s => s.status === 'connected');
+          const errored = mcpServers.filter(s => s.status === 'error');
+          const other = mcpServers.filter(s => s.status !== 'connected' && s.status !== 'error');
+          const statusIcon = (st: string) => st === 'connected' ? '\u2713' : st === 'error' ? '\u2717' : '\u25CB';
+          const statusColor = (st: string) => st; // for clarity in plaintext
+          const formatServer = (s: MCPServerState) => {
+            const toolCount = s.tools.length;
+            const toolStr = toolCount === 1 ? '1 tool' : `${toolCount} tools`;
+            const errStr = s.status === 'error' && s.error ? `   ${s.error}` : '';
+            return `  ${statusIcon(s.status)} ${s.name.padEnd(20)} ${toolStr.padEnd(10)} ${s.status}${errStr}`;
+          };
+          const totalTools = connected.reduce((n, s) => n + s.tools.length, 0);
+          const summary = `MCP Servers (${connected.length} connected, ${errored.length} error${other.length ? `, ${other.length} other` : ''}, ${totalTools} tool${totalTools === 1 ? '' : 's'} total):`;
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: [summary, ...mcpServers.map(formatServer), '', 'Use /mcp reload to re-read .turbodev/mcp.json and reconnect.'].join('\n')
           }]);
         }
         return;
@@ -1452,8 +1535,14 @@ export default function App() {
                 <Text color={agentsContext ? 'green' : 'yellow'}>{agentsContext ? '● AGENTS.md' : '○ No AGENTS.md'}</Text>
                 <Text color="gray">{'  │  '}</Text>
                 <Text color={allSkills.filter(s => s.enabled).length > 0 ? 'green' : 'gray'}>
-                  {allSkills.filter(s => s.enabled).length > 0 ? `● ${allSkills.filter(s => s.enabled).length} skills` : '○ No skills'}
+                  {allSkills.filter(s => s.enabled).length > 0 ? `\u25CF ${allSkills.filter(s => s.enabled).length} skills` : '\u25CB No skills'}
                 </Text>
+                {mcpRegistry && mcpRegistry.getConnectedCount() > 0 && (
+                  <>
+                    <Text color="gray">{'  \u2502  '}</Text>
+                    <Text color="magenta">{`MCP:${mcpRegistry.getConnectedCount()}`}</Text>
+                  </>
+                )}
                 <Text color="gray">{'  │  '}</Text>
                 <Text color="cyan">rosmoscato.xyz/turbodev</Text>
               </Box>
