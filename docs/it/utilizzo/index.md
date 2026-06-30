@@ -26,6 +26,7 @@ La barra di stato in basso mostra:
 | Modello | Modello LLM corrente (nome abbreviato) |
 | Utilizzo token | Mini barra di progresso `████░░░░░░` + `X.XXK/YK` + percentuale |
 | Costo | Costo cumulativo della sessione (es. `$0.0023`) |
+| Badge economy | `ECO` (giallo) o `ULTRA` (rosso) quando economy mode è attivo |
 | Spinner | Animazione braille con tempo trascorso (es. `⠋ AI thinking... 8s`) |
 
 ### Indicatore utilizzo token
