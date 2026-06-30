@@ -25,6 +25,10 @@ Tutti i comandi iniziano con `/`. Digita `/` nella barra di input per aprire la 
 | `/memory add [cat] <text>` | Aggiunge una entry (categorie: preferences, decisions, architecture, facts) |
 | `/memory clear [cat]` | Cancella tutta la memoria o una categoria |
 | `/memory reload` | Ricarica la memoria da disco |
+| `/economy` | Mostra lo stato di economy mode |
+| `/economy eco` | Attiva output conciso (diretto, no filler) |
+| `/economy ultra` | Attiva output ultra-conciso (telegrafico) |
+| `/economy off` | Disattiva economy mode |
 
 ## Comandi Git
 

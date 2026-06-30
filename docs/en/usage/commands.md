@@ -25,6 +25,10 @@ All commands start with `/`. Type `/` in the input bar to open the command palet
 | `/memory add [cat] <text>` | Add a memory entry (categories: preferences, decisions, architecture, facts) |
 | `/memory clear [cat]` | Clear all or one category of memory |
 | `/memory reload` | Reload memory from disk |
+| `/economy` | Show economy mode status |
+| `/economy eco` | Activate concise output (direct, no filler) |
+| `/economy ultra` | Activate ultra-concise output (telegraphic) |
+| `/economy off` | Deactivate economy mode |
 
 ## Git Commands
 

@@ -48,4 +48,5 @@ Non committare mai la tua chiave API nel controllo di versione.
 - [Agent Skills](/it/configurazione/skills) — Skill pack installabili
 - [Server MCP](/it/configurazione/mcp) — Connetti server di strumenti esterni tramite Model Context Protocol
 - [Memoria Persistente](/it/configurazione/memory) — Memoria cross-session via `.turbodev/memory.md`
+- [Economy Mode](/it/configurazione/economy) — Riduci il consumo di token con output conciso
 - [AGENTS.md](/it/configurazione/agents-md) — File di contesto del progetto

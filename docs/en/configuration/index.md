@@ -48,4 +48,5 @@ Never commit your API key to version control.
 - [Agent Skills](/en/configuration/skills) — Installable skill packs
 - [MCP Servers](/en/configuration/mcp) — Connect external tool servers via Model Context Protocol
 - [Persistent Memory](/en/configuration/memory) — Cross-session memory via `.turbodev/memory.md`
+- [Economy Mode](/en/configuration/economy) — Cut token usage with concise output
 - [AGENTS.md](/en/configuration/agents-md) — Project context file

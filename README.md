@@ -29,6 +29,7 @@ TurboDev is an AI coding agent that runs entirely in the terminal. It lets you c
 - **Agent Skills** — extend agent capabilities with installable skill packs (`.agents/skills/`), following the open [Agent Skills](https://agentskills.io) specification
 - **MCP support** — connect external tool servers via the [Model Context Protocol](https://modelcontextprotocol.io) (stdio transport, tools primitive)
 - **Persistent memory** — the AI remembers your preferences, decisions, and project facts across sessions (`.turbodev/memory.md`)
+- **Economy mode** — cut token usage ~50-70% with concise output mode (`/economy eco|ultra`)
 - **Request interruption** — press Escape to cancel a running AI request at any time
 - **AGENTS.md support** — project context and instructions loaded automatically from the open standard
 - **/init wizard** — generate an AGENTS.md file interactively with auto-detection of project type
@@ -92,6 +93,10 @@ Type `/` to open the command palette, or type commands directly:
 | `/memory add [cat] <text>` | Add a memory entry (categories: preferences, decisions, architecture, facts) |
 | `/memory clear [cat]` | Clear all or one category of memory |
 | `/memory reload` | Reload memory from disk |
+| `/economy` | Show economy mode status |
+| `/economy eco` | Activate concise output (direct, no filler) |
+| `/economy ultra` | Activate ultra-concise output (telegraphic) |
+| `/economy off` | Deactivate economy mode |
 
 ### Git commands
 
@@ -205,7 +210,7 @@ Starting June 2026, we ship a new feature every week:
 | Jun 11 | **Skills** ✅ | Installable skill packs that extend agent capabilities |
 | Jun 18 | **MCP** ✅ | Model Context Protocol support for external tool integration |
 | Jun 25 | **Persistent Memory** ✅ | Cross-session memory so the AI remembers your project context |
-| Jul 2 | **Economy Mode** | Budget-aware mode that optimizes token usage and model selection |
+| Jul 2 | **Economy Mode** ✅ | Budget-aware mode that optimizes token usage and model selection |
 | Jul 9 | **Ollama Connection** | Run local models via Ollama alongside OpenRouter |
 
 ## Tech Stack

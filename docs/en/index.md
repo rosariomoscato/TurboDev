@@ -19,6 +19,7 @@ Get started with TurboDev.
 - **Agent Skills** — Extend agent capabilities with installable skill packs (`.agents/skills/`)
 - **MCP Support** — Connect external tool servers via the [Model Context Protocol](https://modelcontextprotocol.io) (`.turbodev/mcp.json`)
 - **Persistent Memory** — The AI remembers your preferences, decisions, and project facts across sessions (`.turbodev/memory.md`)
+- **Economy Mode** — Cut token usage ~50-70% with concise output (`/economy eco|ultra`)
 
 ## Prerequisites
 
@@ -51,4 +52,5 @@ On first launch, the setup wizard will ask for your OpenRouter API key and prefe
 - [Agent Skills](/en/configuration/skills)
 - [MCP servers](/en/configuration/mcp)
 - [Persistent Memory](/en/configuration/memory)
+- [Economy Mode](/en/configuration/economy)
 - [Customize permissions](/en/agents/permissions)
