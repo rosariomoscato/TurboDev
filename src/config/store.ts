@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import type { EconomyLevel } from '../economy/types.js';
 
 export interface GithubAuthState {
   authenticated: boolean;
@@ -14,6 +15,9 @@ export interface TurboDevConfig {
   githubAuth?: GithubAuthState;
   skills?: {
     disabled?: string[];
+  };
+  economy?: {
+    level?: EconomyLevel;
   };
 }
 

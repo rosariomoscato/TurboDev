@@ -9,6 +9,7 @@ import { generateSystemPrompt } from './system-prompt.js';
 import { AgentConfig } from './types.js';
 import type { Skill } from '../skills/types.js';
 import type { MCPRegistry } from '../mcp/registry.js';
+import type { EconomyLevel } from '../economy/types.js';
 
 export interface AgentCallbacks {
   onQuestion?: (question: string, options?: string[]) => Promise<string>;
@@ -45,6 +46,7 @@ export async function runAgent(
   skills?: Skill[],
   mcpRegistry?: MCPRegistry,
   memory?: string,
+  economyLevel?: EconomyLevel,
 ): Promise<AgentResult> {
   const filteredSkills = skills
     ? agent.skills
@@ -60,6 +62,7 @@ export async function runAgent(
     filteredSkills,
     mcpCount,
     memory,
+    economyLevel,
   );
   let messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },

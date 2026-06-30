@@ -1,8 +1,10 @@
 import { TOOL_REGISTRY } from './tools.js';
 import { AgentConfig } from './types.js';
 import type { Skill } from '../skills/types.js';
+import type { EconomyLevel } from '../economy/types.js';
+import { getEconomyPrompt } from '../economy/prompt.js';
 
-export function generateSystemPrompt(projectContext?: string, agent?: AgentConfig, skills?: Skill[], mcpCount?: number, memory?: string): string {
+export function generateSystemPrompt(projectContext?: string, agent?: AgentConfig, skills?: Skill[], mcpCount?: number, memory?: string, economyLevel?: EconomyLevel): string {
   const toolsToInclude = Object.values(TOOL_REGISTRY).filter(tool => {
     if (!agent?.tools) return true;
     if (agent.tools[tool.name] === false) return false;
@@ -87,6 +89,11 @@ Follow the instructions from AGENTS.md when working on this project.`;
 ${memory.trim()}
 
 These are persistent memories from previous sessions. Use them as context, but verify technical details before relying on them — they may be outdated.`;
+  }
+
+  const economyPrompt = economyLevel ? getEconomyPrompt(economyLevel) : null;
+  if (economyPrompt) {
+    prompt += `\n${economyPrompt}\n`;
   }
 
   return prompt;
