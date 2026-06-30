@@ -17,6 +17,7 @@ import { registerMCPTools, unregisterAllMCPTools } from '../mcp/bridge.js';
 import type { MCPServerState } from '../mcp/types.js';
 import { loadMemory, loadMemoryEntries, appendMemory, clearMemory } from '../memory/store.js';
 import type { MemoryCategory } from '../memory/types.js';
+import type { EconomyLevel } from '../economy/types.js';
 import SetupWizard from './SetupWizard.js';
 import InitWizard from './InitWizard.js';
 import ChatView from './ChatView.js';
@@ -76,6 +77,7 @@ const PALETTE_COMMANDS: PaletteCommand[] = [
   { label: '/skills', value: '/skills', description: 'List available skills' },
   { label: '/mcp', value: '/mcp', description: 'List MCP servers and tools' },
   { label: '/memory', value: '/memory', description: 'Manage persistent memory' },
+  { label: '/economy', value: '/economy', description: 'Toggle economy mode (save tokens)' },
   { label: '/setup', value: '/setup', description: 'Re-run setup wizard' },
 ].sort((a, b) => a.label.localeCompare(b.label));
 
@@ -151,6 +153,11 @@ export default function App() {
 
   // --- Memory state -------------------------------------------------------
   const [memoryContext, setMemoryContext] = useState<string>(() => loadMemory(process.cwd()));
+
+  // --- Economy state ------------------------------------------------------
+  const [economyLevel, setEconomyLevel] = useState<EconomyLevel>(
+    () => (loadConfig().economy?.level as EconomyLevel) ?? 'off'
+  );
 
   // --- MCP registry state ------------------------------------------------
   const [mcpRegistry, setMcpRegistry] = useState<MCPRegistry | null>(null);
@@ -641,6 +648,7 @@ export default function App() {
       allSkills,
       mcpRegistry ?? undefined,
       memoryContext || undefined,
+      economyLevel !== 'off' ? economyLevel : undefined,
     );
 
     abortControllerRef.current = null;
@@ -781,6 +789,7 @@ export default function App() {
             '  /skills         List agent skills',
             '  /mcp            List MCP servers and tools',
             '  /memory         Manage persistent memory',
+            '  /economy        Toggle economy mode (eco/ultra/off)',
             '  /exit           Exit TurboDev',
             '',
             'Git Commands:',
@@ -1077,6 +1086,38 @@ export default function App() {
           role: 'assistant',
           content: 'Usage:\n  /memory              Show all memories\n  /memory add [cat] <text>  Add a memory\n  /memory clear [cat]  Clear all or one category\n  /memory reload       Reload from disk'
         }]);
+        return;
+      }
+
+      if (command === 'economy' || command.startsWith('economy ')) {
+        const sub = command.slice(8).trim().toLowerCase();
+
+        if (sub === '') {
+          const desc = economyLevel === 'off'
+            ? 'Economy mode is OFF. Normal output.'
+            : economyLevel === 'eco'
+            ? 'Economy mode is ECO. Direct, no filler. Code stays exact.'
+            : 'Economy mode is ULTRA. Telegraphic fragments. Code stays exact.';
+          setMessages(prev => [...prev, { role: 'assistant', content: desc + '\n\nUsage: /economy [eco|ultra|off]' }]);
+          return;
+        }
+
+        let newLevel: EconomyLevel;
+        if (sub === 'eco' || sub === 'on') newLevel = 'eco';
+        else if (sub === 'ultra') newLevel = 'ultra';
+        else if (sub === 'off') newLevel = 'off';
+        else {
+          setMessages(prev => [...prev, { role: 'assistant', content: 'Unknown level. Usage: /economy [eco|ultra|off]' }]);
+          return;
+        }
+
+        setEconomyLevel(newLevel);
+        saveConfig({ economy: { level: newLevel } });
+
+        const msg = newLevel === 'off'
+          ? 'Economy mode OFF. Normal output restored.'
+          : `Economy mode ${newLevel.toUpperCase()} activated. The AI will be more concise — same code accuracy, fewer tokens.`;
+        setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
         return;
       }
 
@@ -1650,6 +1691,12 @@ export default function App() {
                     <Text color="blue">{`\u25CF mem:${loadMemoryEntries(process.cwd()).length}`}</Text>
                   </>
                 )}
+                {economyLevel !== 'off' && (
+                  <>
+                    <Text color="gray">{'  \u2502  '}</Text>
+                    <Text color={economyLevel === 'ultra' ? 'red' : 'yellow'} bold>{economyLevel.toUpperCase()}</Text>
+                  </>
+                )}
                 <Text color="gray">{'  │  '}</Text>
                 <Text color="cyan">rosmoscato.xyz/turbodev</Text>
               </Box>
@@ -1798,7 +1845,7 @@ export default function App() {
         </Box>
       )}
       <Box marginTop={1}>
-        <StatusBar model={config.model} status={status} agent={currentAgent} tokenCount={tokenCount} contextLength={contextLength} sessionCost={sessionCost} thinkingStart={thinkingStart} />
+        <StatusBar model={config.model} status={status} agent={currentAgent} tokenCount={tokenCount} contextLength={contextLength} sessionCost={sessionCost} thinkingStart={thinkingStart} economyLevel={economyLevel} />
       </Box>
     </Box>
   );

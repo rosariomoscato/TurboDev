@@ -11,6 +11,7 @@ interface Props {
   contextLength?: number;
   sessionCost?: number;
   thinkingStart?: number;
+  economyLevel?: string;
 }
 
 function mapAgentColor(color?: string): string {
@@ -77,7 +78,7 @@ function formatCost(cost: number): string {
   return `$${cost.toFixed(2)}`;
 }
 
-const StatusBar = memo(function StatusBar({ model, status, agent, tokenCount, contextLength, sessionCost, thinkingStart }: Props) {
+const StatusBar = memo(function StatusBar({ model, status, agent, tokenCount, contextLength, sessionCost, thinkingStart, economyLevel }: Props) {
   const columns = process.stdout.columns || 100;
   const width = Math.max(40, columns - 2);
   const isThinking = status === 'AI thinking...' || (status?.includes('thinking...') ?? false);
@@ -131,6 +132,14 @@ const StatusBar = memo(function StatusBar({ model, status, agent, tokenCount, co
         <>
           <Text color="gray"> | </Text>
           <Text color="magenta">{formatCost(sessionCost)}</Text>
+        </>
+      ) : null}
+      {economyLevel && economyLevel !== 'off' ? (
+        <>
+          <Text color="gray"> | </Text>
+          <Text color={economyLevel === 'ultra' ? 'red' : 'yellow'} bold>
+            {economyLevel === 'ultra' ? 'ULTRA' : 'ECO'}
+          </Text>
         </>
       ) : null}
       {isThinking ? (
